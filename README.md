@@ -39,7 +39,7 @@ Export complaint data as Excel reports
 Installation and Setup
 Prerequisites: Python 3.10+, MongoDB running locally, Git
 Step 1 - Clone the repository:
-git clone https://github.com/your-username/CivicConnect.git
+git clone https://github.com/Mayankpawar28/Smart-Civic-Grievance-Reporting-and-Tracking-System-Using-AI-
 cd CivicConnect
 Step 2 - Install dependencies:
 pip install -r requirements.txt
