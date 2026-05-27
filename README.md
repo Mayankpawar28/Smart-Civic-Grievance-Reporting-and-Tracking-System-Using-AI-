@@ -68,9 +68,15 @@ Default admin login — Email: admin@civic.gov (password set on first run)
 Department logins are visible in the Admin panel under Departments.
 
 
+
+
+
 Team Members:
 
 Mayank Pawar — Medicaps University, B.Tech Computer Science and Engineering
+
+
+
 
 
 Project Screenshots:
