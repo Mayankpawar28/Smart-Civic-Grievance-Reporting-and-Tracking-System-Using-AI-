@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── 2-tab role switcher ── */
+.role-tabs {
+  display: flex; gap: 0; margin-bottom: 1.25rem;
+  border-radius: 10px; overflow: hidden; border: 1.5px solid var(--border);
+}
+.role-tab {
+  flex: 1; padding: .6rem .5rem; border: none; background: #f8fafc;
+  font-family: var(--ff-body); font-size: .82rem; font-weight: 600;
+  cursor: pointer; color: var(--muted2); transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: .35rem;
+  white-space: nowrap;
+}
+.role-tab + .role-tab { border-left: 1.5px solid var(--border); }
+.role-tab.active.citizen { background: #4f46e5; color: #fff; }
+.role-tab.active.admin   { background: #1e3a8a; color: #fff; }
+.role-tab:not(.active):hover { background: #f1f5f9; color: var(--text); }
+
+/* ── Portal header ── */
+.portal-header { margin-bottom: 1.5rem; }
+.portal-title {
+  font-family: var(--ff-head); font-size: 1.75rem; font-weight: 800;
+  color: #0f172a; margin-bottom: .3rem; transition: color .2s;
+}
+.portal-title.admin-mode { color: #1e3a8a; }
+.portal-subtitle { font-size: .85rem; color: var(--muted2); font-weight: 500; line-height: 1.5; }
+
+/* ── Portal context banner ── */
+.portal-banner {
+  padding: .5rem .9rem; border-radius: 8px; margin-bottom: 1.25rem;
+  font-size: .82rem; font-weight: 500; line-height: 1.5; transition: all .3s;
+}
+.portal-banner.citizen { background: #eef2ff; color: #4338ca; border: 1px solid rgba(79,70,229,.2); }
+.portal-banner.admin   { background: #eff6ff; color: #1d4ed8; border: 1px solid rgba(29,78,216,.25); }
+
+/* ── Login button variants ── */
+.split-btn.citizen    { background: #4f46e5; }
+.split-btn.citizen:hover { background: #4338ca; }
+.split-btn.admin      { background: #1e3a8a; }
+.split-btn.admin:hover { background: #1e40af; }
+</style>
+</head>
+<body class="auth-page split-auth-page">
+
+<div class="split-auth-card">
+  <!-- Left panel -->
+  <div class="split-left" id="splitLeft">
+    <div class="split-brand">CivicConnect</div>
+    <div class="split-tagline" id="leftTagline">Empowering<br>Urban Redressal.</div>
+    <p class="split-desc" id="leftDesc">A centralized digital infrastructure for reporting civic misconduct and tracking resolution progress in real-time.</p>
+  </div>
+
+  <!-- Right panel -->
+  <div class="split-right">
+
+    <div class="portal-header">
+      <div class="portal-title" id="portalTitle">Welcome back</div>
+      <div class="portal-subtitle" id="portalSubtitle">Sign in to your Citizen account to submit and track complaints.</div>
+    </div>
+
+    <!-- 2-tab switcher: Citizen | Admin (dept staff also use Admin tab) -->
+    <div class="role-tabs">
+      <button class="role-tab citizen active" id="tabCitizen" onclick="setRole('citizen')">👤 Citizen</button>
+      <button class="role-tab admin"          id="tabAdmin"   onclick="setRole('admin')">🔐 Admin / Department</button>
+    </div>
+
+    <div class="portal-banner citizen" id="portalBanner">
+      👤 Citizen Portal — submit and track your civic complaints
+    </div>
+
+    <div id="msg" class="msg hidden"></div>
+
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="name@example.com" onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+
+    <div class="form-group">
+      <div class="pw-label-row">
+        <label>Password</label>
+        <a href="/forgot-password" class="reset-link" id="forgotLink">Forgot password?</a>
+      </div>
+      <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+
+    <label class="persist-check" id="persistRow">
+      <input type="checkbox" id="persist"> Persistent Session
+    </label>
+
+    <button class="btn btn-primary btn-full split-btn citizen" id="loginBtn" onclick="doLogin()">Login</button>
+
+    <div class="split-divider"></div>
+    <p class="split-switch" id="bottomHint">New to CivicConnect? <a href="/register">Register</a></p>
+  </div>
+</div>
+
+<script>
+let role = 'citizen';
+
+const CONFIG = {
+  citizen: {
+    title:       'Welcome back',
+    titleClass:  'portal-title',
+    subtitle:    'Sign in to your Citizen account to submit and track complaints.',
+    bannerClass: 'portal-banner citizen',
+    bannerText:  '👤 Citizen Portal — submit and track your civic complaints',
+    btnClass:    'btn btn-primary btn-full split-btn citizen',
+    btnText:     'Login',
+    hint:        'New to CivicConnect? <a href="/register">Register</a>',
+    leftTagline: 'Empowering<br>Urban Redressal.',
+    leftDesc:    'A centralized digital infrastructure for reporting civic misconduct and tracking resolution progress in real-time.',
+    showPersist: true,
+  },
+  admin: {
+    title:       'Admin / Department Access',
+    titleClass:  'portal-title admin-mode',
+    subtitle:    'For administrators and department staff — use credentials issued by the admin.',
+    bannerClass: 'portal-banner admin',
+    bannerText:  '🔐 Admin & Department Portal — restricted access only',
+    btnClass:    'btn btn-primary btn-full split-btn admin',
+    btnText:     'Sign In',
+    hint:        'Not an admin or dept? <a href="#" onclick="setRole(\'citizen\');return false;">Switch to Citizen login</a>',
+    leftTagline: 'Admin &amp;<br>Department Panel.',
+    leftDesc:    'Admins oversee all complaints. Department staff manage complaints assigned to their department.',
+    showPersist: true,
+  }
+};
+
+function setRole(r) {
+  role = r;
+  const cfg = CONFIG[r];
+
+  ['citizen', 'admin'].forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1))
+      .classList.toggle('active', t === r);
+  });
+
+  document.getElementById('portalTitle').textContent    = cfg.title;
+  document.getElementById('portalTitle').className      = cfg.titleClass;
+  document.getElementById('portalSubtitle').textContent = cfg.subtitle;
+  document.getElementById('portalBanner').className     = cfg.bannerClass;
+  document.getElementById('portalBanner').textContent   = cfg.bannerText;
+  document.getElementById('loginBtn').className         = cfg.btnClass;
+  document.getElementById('loginBtn').textContent       = cfg.btnText;
+  document.getElementById('bottomHint').innerHTML       = cfg.hint;
+  document.getElementById('leftTagline').innerHTML      = cfg.leftTagline;
+  document.getElementById('leftDesc').textContent       = cfg.leftDesc;
+  document.getElementById('persistRow').style.display   = cfg.showPersist ? '' : 'none';
+  document.getElementById('msg').className = 'msg hidden';
+}
+
+async function doLogin() {
+  const btn      = document.getElementById('loginBtn');
+  const msg      = document.getElementById('msg');
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!email || !password) {
+    msg.textContent = 'Please enter your email and password.';
+    msg.className = 'msg error'; return;
+  }
+
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  msg.className = 'msg hidden';
+
+  try {
+    // Both admin and department staff send portal='admin' — backend routes correctly
+    const body = { email, password, portal: role };
+
+    const res  = await fetch('/api/login', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      window.location.href = '/dashboard';
+    } else {
+      msg.textContent = data.error;
+      msg.className   = 'msg error';
+      btn.disabled    = false;
+      btn.textContent = originalText;
+    }
+  } catch {
+    msg.textContent = 'Network error. Please try again.';
+    msg.className   = 'msg error';
+    btn.disabled    = false;
+    btn.textContent = originalText;
+  }
+}
+</script>
+</body>
+</html>

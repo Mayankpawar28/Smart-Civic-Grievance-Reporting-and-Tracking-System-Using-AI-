@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submit Complaint – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="/static/js/main.js"></script>
+<style>
+/* ── BASE ── */
+html, body { height:100%; margin:0; padding:0; overflow:hidden; }
+body { display:flex; }
+
+.submit-layout {
+  display:flex; flex-direction:row;
+  width:100vw; height:100vh; overflow:hidden; background:#f4f6fb;
+}
+.submit-layout .sidebar { flex-shrink:0; width:220px; height:100vh; overflow:hidden; }
+.submit-content { flex:1; display:flex; flex-direction:row; overflow:hidden; height:100vh; min-width:0; }
+
+/* ── FORM PANEL ── */
+.form-panel {
+  width:420px; min-width:340px; max-width:420px; flex-shrink:0;
+  overflow-y:auto; overflow-x:hidden;
+  background:#fff; box-shadow:2px 0 20px rgba(0,0,0,.07);
+  display:flex; flex-direction:column;
+  padding:1.5rem 1.6rem 1.2rem;
+  height:100vh; box-sizing:border-box;
+  scrollbar-width:thin; scrollbar-color:#e5e7eb transparent;
+}
+
+/* ── MAP PANEL ── */
+.map-panel { flex:1; position:relative; background:#e8edf5; overflow:hidden; height:100vh; min-width:200px; }
+#map { position:absolute; inset:0; width:100%; height:100%; z-index:1; }
+#map img { max-width:none!important; max-height:none!important; box-sizing:content-box!important; }
+.leaflet-tile-pane img { max-width:none!important; max-height:none!important; }
+.map-overlay-bar {
+  position:absolute; bottom:0; left:0; right:0; z-index:2;
+  background:rgba(255,255,255,.95); backdrop-filter:blur(8px);
+  border-top:1px solid #e5e7eb; padding:.55rem 1rem;
+  display:flex; align-items:center; gap:.6rem;
+}
+.map-location-display { flex:1; font-size:.8rem; color:#94a3b8; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.map-location-display.has-pin { color:#0f172a; }
+
+/* ── HEADER ── */
+.form-header { margin-bottom:1.2rem; }
+.form-header h1 { font-family:'Playfair Display',serif; font-size:1.55rem; font-weight:800; color:#0f172a; margin:0 0 .3rem; }
+.form-header p { color:#64748b; font-size:.85rem; margin:0; line-height:1.5; }
+
+/* ── STEP INDICATOR ── */
+.step-indicator {
+  display:flex; align-items:center; gap:0;
+  margin-bottom:1.4rem; padding:.75rem 0; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;
+}
+.step { display:flex; align-items:center; gap:.45rem; flex:1; }
+.step-num {
+  width:26px; height:26px; border-radius:50%; font-size:.75rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  background:#e5e7eb; color:#9ca3af;
+}
+.step.active .step-num { background:#4f46e5; color:#fff; }
+.step.done .step-num { background:#22c55e; color:#fff; }
+.step-label { font-size:.8rem; font-weight:600; color:#9ca3af; }
+.step.active .step-label { color:#0f172a; }
+.step.done .step-label { color:#15803d; }
+.step-line { flex:1; height:2px; background:#e5e7eb; margin:0 .4rem; }
+.step-line.done { background:#22c55e; }
+
+/* ── SECTION LABEL ── */
+.form-section-label {
+  font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:#94a3b8; margin:0 0 .85rem; display:flex; align-items:center; gap:.5rem;
+}
+.form-section-label::after { content:''; flex:1; height:1px; background:#e5e7eb; }
+
+/* ── FORM GROUPS ── */
+.form-group { margin-bottom:.9rem; }
+.form-group label { font-size:.82rem; font-weight:600; color:#374151; display:block; margin-bottom:.35rem; }
+.form-group input, .form-group select, .form-group textarea {
+  width:100%; padding:.55rem .75rem; font-size:.88rem; border:1.5px solid #e5e7eb;
+  border-radius:10px; font-family:inherit; box-sizing:border-box; outline:none; transition:border-color .2s, box-shadow .2s;
+  color:#0f172a;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.1);
+}
+.form-group textarea { resize:vertical; height:110px; min-height:80px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
+
+.step-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.4rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid #e5e7eb;
+  gap: .75rem;
+}
+/* Animate step sections */
+.wizard-section-enter {
+  animation: slideInStep .28s ease;
+}
+@keyframes slideInStep {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* ── AI BUTTONS ── */
+.ai-label-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:.35rem; }
+.ai-label-row label { margin-bottom:0; }
+.ai-btn {
+  display:inline-flex; align-items:center; gap:.3rem; padding:.25rem .65rem;
+  border-radius:7px; font-size:.75rem; font-weight:600; cursor:pointer;
+  border:1.5px solid #c7d2fe; background:#eef2ff; color:#4f46e5; transition:all .2s; white-space:nowrap;
+}
+.ai-btn:hover { background:#e0e7ff; border-color:#a5b4fc; }
+.ai-btn:disabled { opacity:.5; cursor:not-allowed; }
+.ai-btn .ai-spin { animation:spin .7s linear infinite; display:inline-block; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.ai-suggestion-bar {
+  margin-top:.35rem; padding:.3rem .6rem; border-radius:8px; background:#f0fdf4;
+  border:1px solid #bbf7d0; color:#166534; font-size:.76rem; font-weight:500;
+  display:none; align-items:center; gap:.4rem;
+}
+.ai-suggestion-bar.show { display:flex; }
+.ai-suggestion-bar .apply-btn {
+  margin-left:auto; padding:.18rem .55rem; border-radius:6px;
+  background:#22c55e; color:#fff; border:none; font-size:.7rem; font-weight:600; cursor:pointer;
+}
+
+.char-counter { font-size:.7rem; color:#94a3b8; text-align:right; margin-top:.2rem; }
+.char-counter.warn { color:#d97706; }
+.char-counter.over { color:#ef4444; }
+
+/* ── PHOTO DROP ZONE ── */
+.photo-dropzone {
+  border:2px dashed #c7d2fe; border-radius:12px; background:#f8f9ff;
+  padding:1.4rem 1rem; text-align:center; cursor:pointer;
+  transition:border-color .2s, background .2s; position:relative;
+  margin-bottom:.6rem;
+}
+.photo-dropzone:hover, .photo-dropzone.drag-over { border-color:#4f46e5; background:#eef2ff; }
+.photo-dropzone input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.dropzone-icon { font-size:1.5rem; margin-bottom:.4rem; display:block; }
+.dropzone-main { font-size:.85rem; font-weight:600; color:#4f46e5; margin-bottom:.2rem; }
+.dropzone-sub { font-size:.74rem; color:#94a3b8; }
+
+.photo-alt-actions { display:flex; gap:.5rem; margin-bottom:.3rem; }
+.photo-btn {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:.35rem;
+  padding:.45rem; border-radius:9px; font-size:.78rem; font-weight:600;
+  cursor:pointer; border:1.5px solid #c7d2fe; background:#f8f9ff; color:#4f46e5;
+  transition:all .15s; white-space:nowrap;
+}
+.photo-btn:hover { background:#eef2ff; border-color:#4f46e5; }
+.photo-btn.camera { background:#f0fdf4; border-color:#bbf7d0; color:#15803d; }
+.photo-btn.camera:hover { background:#dcfce7; }
+.photo-btn input[type="file"] { display:none; }
+
+.image-previews { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.4rem; }
+.preview-item { position:relative; border-radius:8px; overflow:hidden; width:56px; height:56px; border:1.5px solid #e5e7eb; }
+.preview-item img { width:100%; height:100%; object-fit:cover; display:block; }
+.preview-item .uploading-overlay {
+  position:absolute; inset:0; background:rgba(0,0,0,.5);
+  display:flex; align-items:center; justify-content:center; color:#fff; font-size:.62rem; font-weight:600;
+}
+.preview-item .remove-btn {
+  position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%;
+  background:rgba(239,68,68,.9); color:#fff; border:none; cursor:pointer;
+  font-size:.6rem; display:flex; align-items:center; justify-content:center;
+}
+.upload-count { font-size:.7rem; color:#64748b; margin-top:.25rem; }
+
+/* ── CAMERA MODAL ── */
+.camera-modal { display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.85); align-items:center; justify-content:center; }
+.camera-modal.open { display:flex; }
+.camera-box { background:#000; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; align-items:center; max-width:480px; width:calc(100vw - 2rem); }
+.camera-box video { width:100%; max-height:56vh; object-fit:cover; display:block; }
+.camera-controls { display:flex; align-items:center; justify-content:center; gap:1rem; padding:.75rem 1rem; background:#111; width:100%; box-sizing:border-box; }
+.cam-snap-btn { width:58px; height:58px; border-radius:50%; background:#fff; border:4px solid #4f46e5; cursor:pointer; font-size:1.4rem; display:flex; align-items:center; justify-content:center; transition:transform .1s; }
+.cam-snap-btn:active { transform:scale(.9); }
+.cam-close-btn, .cam-switch-btn { padding:.45rem 1.1rem; border-radius:8px; background:#374151; color:#fff; border:none; font-size:.8rem; font-weight:600; cursor:pointer; }
+canvas#snapCanvas { display:none; }
+
+/* ── LOCATION ── */
+.location-row { display:flex; gap:.5rem; align-items:stretch; }
+.location-row input { flex:1; }
+.location-row .btn { white-space:nowrap; font-size:.78rem; padding:.5rem .85rem; }
+
+/* ── SUBMIT FOOTER ── */
+.submit-footer { margin-top:auto; padding-top:.9rem; border-top:1px solid #e5e7eb; }
+
+/* ── MAP SEARCH ── */
+.map-search-bar {
+  position:absolute; top:10px; left:50%; transform:translateX(-50%);
+  z-index:10; display:flex; align-items:center;
+  background:#fff; border-radius:9px; box-shadow:0 4px 20px rgba(0,0,0,.18);
+  border:1.5px solid #e5e7eb; overflow:hidden; width:calc(100% - 2rem); max-width:440px;
+}
+.map-search-icon { padding:0 .5rem 0 .75rem; font-size:.95rem; color:#9ca3af; }
+.map-search-input { flex:1; border:none; outline:none; padding:.6rem .35rem; font-family:'DM Sans',sans-serif; font-size:.85rem; color:#1e293b; background:transparent; }
+.map-search-input::placeholder { color:#9ca3af; }
+.map-search-btn { padding:.6rem .85rem; background:#4f46e5; color:#fff; border:none; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.78rem; font-weight:600; white-space:nowrap; }
+.map-search-btn:hover { background:#4338ca; }
+
+/* ── CHATBOT ── */
+.chatbot-fab { position:fixed; bottom:1.2rem; right:1.2rem; z-index:400; width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#4f46e5,#7c3aed); border:none; cursor:pointer; box-shadow:0 4px 20px rgba(79,70,229,.5); font-size:1.15rem; color:#fff; display:flex; align-items:center; justify-content:center; transition:transform .2s; }
+.chatbot-fab:hover { transform:scale(1.1); }
+.chatbot-window { position:fixed; bottom:4.5rem; right:1.2rem; z-index:400; width:300px; height:390px; background:#fff; border-radius:16px; box-shadow:0 8px 40px rgba(0,0,0,.18); display:flex; flex-direction:column; overflow:hidden; transform:scale(0); transform-origin:bottom right; transition:transform .25s cubic-bezier(.4,0,.2,1); border:1px solid #e5e7eb; }
+.chatbot-window.open { transform:scale(1); }
+.chat-header { padding:.75rem .9rem; background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; display:flex; align-items:center; gap:.5rem; }
+.chat-header-info .chat-title { font-weight:700; font-size:.84rem; }
+.chat-header-info .chat-sub { font-size:.68rem; opacity:.8; }
+.chat-close { margin-left:auto; background:none; border:none; color:#fff; font-size:.9rem; cursor:pointer; }
+.chat-messages { flex:1; overflow-y:auto; padding:.75rem; display:flex; flex-direction:column; gap:.5rem; }
+.chat-msg { max-width:85%; padding:.5rem .75rem; border-radius:11px; font-size:.8rem; line-height:1.5; }
+.chat-msg.bot  { background:#f1f5f9; color:#1e293b; align-self:flex-start; border-bottom-left-radius:3px; }
+.chat-msg.user { background:#4f46e5; color:#fff; align-self:flex-end; border-bottom-right-radius:3px; }
+.chat-msg.typing { background:#f1f5f9; color:#94a3b8; }
+.chat-input-row { padding:.5rem; border-top:1px solid #e5e7eb; display:flex; gap:.35rem; }
+.chat-input { flex:1; padding:.4rem .65rem; border:1.5px solid #e5e7eb; border-radius:999px; font-family:'DM Sans',sans-serif; font-size:.8rem; outline:none; }
+.chat-input:focus { border-color:#4f46e5; }
+.chat-send { width:30px; height:30px; border-radius:50%; background:#4f46e5; border:none; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+/* ── MOBILE ── */
+@media (max-width:900px) {
+  html, body { height:auto; overflow:auto; }
+  body { flex-direction:column; }
+  .submit-layout { flex-direction:column; height:auto; min-height:100vh; overflow:visible; }
+  .submit-layout .sidebar { display:none; }
+  .submit-content { flex-direction:column; height:auto; overflow:visible; }
+  .form-panel { width:100% !important; min-width:0 !important; max-width:100% !important; height:auto !important; overflow:visible !important; box-shadow:none; padding:1.2rem 1rem 1.4rem; }
+  .map-panel { width:100%; height:340px; position:relative; flex:none; }
+  .map-search-bar { max-width:calc(100% - 1rem); }
+}
+</style>
+</head>
+<body>
+<div class="submit-layout">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">C</div>
+      <div><div class="sb-brand-name">CivicConnect</div><small>Citizen Portal</small></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/dashboard" class="sb-link"><span class="sb-icon">📊</span> Dashboard</a>
+      <a href="/submit-complaint" class="sb-link active"><span class="sb-icon">➕</span> Submit Complaint</a>
+      <a href="/my-complaints" class="sb-link"><span class="sb-icon">📋</span> My Complaints</a>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user" style="cursor:default">
+        <div class="sb-avatar" id="userAvatar">—</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sidebarName">…</div>
+          <div class="sb-user-role">Citizen</div>
+        </div>
+      </div>
+      <button class="sb-logout-btn" onclick="logout()">↩ Logout</button>
+    </div>
+  </aside>
+
+  <div class="submit-content">
+    <!-- LEFT: Compact Form -->
+    <div class="form-panel">
+
+      <!-- Header -->
+      <div class="form-header">
+        <h1>Submit a Complaint</h1>
+        <p>Describe your civic issue and pin it on the map — we'll route it to the right department.</p>
+      </div>
+
+      <!-- Step indicator -->
+      <div class="step-indicator">
+        <div class="step active" id="step-tab-1" style="cursor:default;">
+          <div class="step-num">1</div>
+          <span class="step-label">Details</span>
+        </div>
+        <div class="step-line" id="step-line-1"></div>
+        <div class="step" id="step-tab-2" style="cursor:default;">
+          <div class="step-num">2</div>
+          <span class="step-label">Photos</span>
+        </div>
+        <div class="step-line" id="step-line-2"></div>
+        <div class="step" id="step-tab-3" style="cursor:default;">
+          <div class="step-num">3</div>
+          <span class="step-label">Location</span>
+        </div>
+      </div>
+
+      <div id="msg" class="msg hidden"></div>
+
+      <!-- Step 1: Issue Details -->
+      <div id="wizard-step-1">
+      <div class="form-section-label">Issue Details</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <div class="ai-label-row">
+            <label>Title *</label>
+            <button class="ai-btn" id="aiCatBtn" onclick="aiCategorize()">🤖 AI Suggest</button>
+          </div>
+          <input type="text" id="title" placeholder="Brief title of the issue" oninput="updateStepProgress()">
+          <div class="ai-suggestion-bar" id="catSuggestion">
+            <span id="catSugText"></span>
+            <button class="apply-btn" onclick="applyCatSuggestion()">Apply</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="category" onchange="updateStepProgress()">
+            <option value="">— Select —</option>
+            <option>Potholes &amp; Roads</option>
+            <option>Garbage &amp; Sanitation</option>
+            <option>Water Supply</option>
+            <option>Streetlights</option>
+            <option>Drainage &amp; Flooding</option>
+            <option>Parks &amp; Public Spaces</option>
+            <option>Noise Pollution</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="ai-label-row">
+          <label>Description *</label>
+          <button class="ai-btn" id="enhanceBtn" onclick="enhanceDescription()">✨ AI Enhance</button>
+        </div>
+        <textarea id="description" placeholder="Describe the issue in detail…" oninput="updateCharCount(); updateStepProgress()" maxlength="1000"></textarea>
+        <div class="char-counter" id="charCounter">0 / 1000</div>
+        <div class="ai-suggestion-bar" id="enhanceSuggestion">
+          <span id="enhanceText"></span>
+          <button class="apply-btn" onclick="applyEnhancement()">Apply</button>
+        </div>
+      </div>
+
+      </div><!-- end wizard-step-1 -->
+
+      <!-- Step 2: Photos -->
+      <div id="wizard-step-2">
+      <div class="form-section-label">Photos <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:.68rem">(optional)</span></div>
+
+      <div class="form-group">
+        <div class="photo-dropzone" id="dropzone"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="event.preventDefault();this.classList.remove('drag-over');handleFiles(event.dataTransfer.files)">
+          <input type="file" id="imageInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+          <span class="dropzone-icon">📷</span>
+          <div class="dropzone-main">Click or drag photos here</div>
+          <div class="dropzone-sub">PNG, JPG, GIF, WEBP · Max 16MB each · Up to 5</div>
+        </div>
+        <div class="photo-alt-actions">
+          <button class="photo-btn camera" onclick="openCamera()" type="button">📸 Take Photo</button>
+        </div>
+        <div class="image-previews" id="imagePreviews"></div>
+        <div class="upload-count" id="uploadCount"></div>
+      </div>
+
+      </div><!-- end wizard-step-2 -->
+
+      <!-- Step 3: Location -->
+      <div id="wizard-step-3">
+      <div class="form-section-label">Location</div>
+
+      <div class="form-group">
+        <label>Location * <span style="font-size:.74rem;color:#6b7280;font-weight:400;">(type manually, search map, or click the map)</span></label>
+        <div class="location-row">
+          <input type="text" id="location" placeholder="e.g. Ward 3, MG Road, Indore" oninput="updateStepProgress()">
+          <button class="btn btn-outline btn-sm" onclick="useMyLocation()">📍 My Location</button>
+        </div>
+        <input type="hidden" id="lat">
+        <input type="hidden" id="lng">
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-footer">
+        <button class="btn btn-primary btn-full" id="submitBtn" onclick="submitComplaint()" style="border-radius:10px;padding:.85rem;font-size:.95rem;font-weight:700;">
+          Submit Complaint
+        </button>
+      </div>
+      </div><!-- end wizard-step-3 -->
+
+    </div>
+
+    <!-- RIGHT: Map -->
+    <div class="map-panel">
+      <div class="map-search-bar">
+        <span class="map-search-icon">🔍</span>
+        <input type="text" id="mapSearchInput" class="map-search-input"
+          placeholder="Search address, locality or landmark…"
+          onkeydown="if(event.key==='Enter') searchAddress()">
+        <button class="map-search-btn" onclick="searchAddress()">Search</button>
+      </div>
+      <div id="map"></div>
+      <div class="map-overlay-bar">
+        <span>📍</span>
+        <div class="map-location-display" id="mapLocationDisplay">Click the map or search to pin your location</div>
+        <button class="btn btn-outline btn-sm" onclick="useMyLocation()" style="flex-shrink:0;font-size:.74rem">📍 My Location</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="camera-modal" id="cameraModal">
+  <div class="camera-box">
+    <video id="cameraVideo" autoplay playsinline muted></video>
+    <div class="camera-controls">
+      <button class="cam-close-btn" onclick="closeCamera()">✕ Cancel</button>
+      <button class="cam-snap-btn" onclick="snapPhoto()" title="Take photo">📷</button>
+      <button class="cam-switch-btn" onclick="switchCamera()">🔄 Flip</button>
+    </div>
+  </div>
+</div>
+<canvas id="snapCanvas"></canvas>
+
+<button class="chatbot-fab" onclick="toggleChat()" title="Ask CivicAI">🤖</button>
+<div class="chatbot-window" id="chatWindow">
+  <div class="chat-header">
+    <div style="font-size:1rem">🤖</div>
+    <div class="chat-header-info">
+      <div class="chat-title">CivicAI Assistant</div>
+      <div class="chat-sub">Ask about civic issues</div>
+    </div>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg bot">Hi! I'm CivicAI 👋 I can help you describe complaints clearly or answer questions about city services.</div>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" placeholder="Ask a question…" onkeydown="if(event.key==='Enter') sendChat()">
+    <button class="chat-send" onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let map, marker, uploadedImages = [];
+
+// ── Camera ────────────────────────────────────────────────────
+let cameraStream = null, facingMode = "environment";
+
+async function openCamera() {
+  if (uploadedImages.length >= 5) { showMsg("Maximum 5 images allowed.", "error"); return; }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    document.getElementById("cameraVideo").srcObject = cameraStream;
+    document.getElementById("cameraModal").classList.add("open");
+  } catch (err) {
+    if (err.name === "NotAllowedError") showMsg("Camera permission denied. Please allow camera access in your browser settings.", "error");
+    else if (err.name === "NotFoundError") showMsg("No camera found on this device. Use 'Choose from Gallery' instead.", "error");
+    else showMsg("Could not open camera: " + err.message, "error");
+  }
+}
+
+async function switchCamera() {
+  facingMode = facingMode === "environment" ? "user" : "environment";
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); }
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+    });
+    document.getElementById("cameraVideo").srcObject = cameraStream;
+  } catch { facingMode = facingMode === "environment" ? "user" : "environment"; }
+}
+
+function snapPhoto() {
+  const video = document.getElementById("cameraVideo");
+  const canvas = document.getElementById("snapCanvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+  canvas.toBlob(async blob => {
+    const file = new File([blob], `photo_${Date.now()}.jpg`, { type: "image/jpeg" });
+    closeCamera();
+    const id = "img_" + Date.now() + Math.random().toString(36).slice(2);
+    addPreview(id, file);
+    await uploadFile(id, file);
+  }, "image/jpeg", 0.9);
+}
+
+function closeCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  document.getElementById("cameraModal").classList.remove("open");
+  document.getElementById("cameraVideo").srcObject = null;
+}
+
+// Close camera if user taps outside the box
+document.getElementById("cameraModal").addEventListener("click", function(e) {
+  if (e.target === this) closeCamera();
+});
+
+// ── Gallery upload ────────────────────────────────────────────
+async function handleFiles(files) {
+  const remaining = 5 - uploadedImages.length;
+  if (remaining <= 0) { showMsg("Maximum 5 images allowed.", "error"); return; }
+  for (const file of Array.from(files).slice(0, remaining)) {
+    if (!file.type.match(/image\/(png|jpeg|gif|webp)/)) { showMsg(`"${file.name}" not supported.`, "error"); continue; }
+    if (file.size > 16*1024*1024) { showMsg(`"${file.name}" exceeds 16MB.`, "error"); continue; }
+    const id = "img_" + Date.now() + Math.random().toString(36).slice(2);
+    addPreview(id, file); await uploadFile(id, file);
+  }
+  document.getElementById("imageInput").value = "";
+}
+
+function initMap() {
+  map = L.map("map", { zoomControl: true }).setView([20.5937, 78.9629], 5);
+
+  // Satellite layer (ESRI World Imagery — free, no API key)
+  // Google Satellite — best coverage, zoom up to 21, works great in India
+  const satellite = L.tileLayer(
+    "https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+    {
+      attribution: '© Google',
+      subdomains: ['0','1','2','3'],
+      maxZoom: 21,
+      maxNativeZoom: 21,
+    }
+  );
+  // Google Hybrid — satellite + road labels on top
+  const labels = L.tileLayer(
+    "https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+    {
+      attribution: '© Google',
+      subdomains: ['0','1','2','3'],
+      maxZoom: 21,
+      maxNativeZoom: 21,
+    }
+  );
+  // Street map fallback
+  const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  });
+
+  // Start with Google hybrid (satellite + labels)
+  labels.addTo(map);
+  map.setMaxZoom(21);
+
+  // Toggle button (top-right)
+  let isSatellite = true;
+  const toggleBtn = L.control({ position: "topright" });
+  toggleBtn.onAdd = function() {
+    const btn = L.DomUtil.create("button");
+    btn.innerHTML = "🗺️ Street";
+    btn.style.cssText = "background:#fff;border:none;border-radius:8px;padding:.35rem .75rem;font-size:.78rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);color:#1e293b;margin:8px 8px 0 0;";
+    L.DomEvent.on(btn, "click", function(e) {
+      L.DomEvent.stopPropagation(e);
+      if (isSatellite) {
+        map.removeLayer(labels);
+        streets.addTo(map);
+        map.setMaxZoom(19);
+        btn.innerHTML = "🛰️ Satellite";
+      } else {
+        map.removeLayer(streets);
+        labels.addTo(map);
+        map.setMaxZoom(21);
+        btn.innerHTML = "🗺️ Street";
+      }
+      isSatellite = !isSatellite;
+    });
+    return btn;
+  };
+  toggleBtn.addTo(map);
+
+  const icon = L.icon({
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34], shadowSize:[41,41]
+  });
+  window.markerIcon = icon;
+  map.on("click", e => { placeMarker(e.latlng.lat, e.latlng.lng); reverseGeocode(e.latlng.lat, e.latlng.lng); });
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => map.setView([pos.coords.latitude, pos.coords.longitude], 14), ()=>{});
+  }
+  // Force map to recalculate after DOM + any CSS transitions settle
+  setTimeout(() => { map.invalidateSize(); }, 100);
+  setTimeout(() => { map.invalidateSize(); }, 600);
+  window.addEventListener('resize', () => map.invalidateSize());
+}
+
+async function searchAddress() {
+  const query = document.getElementById("mapSearchInput").value.trim();
+  if (!query) return;
+  const btn = document.querySelector(".map-search-btn");
+  btn.textContent = "…"; btn.disabled = true;
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`, { headers:{"Accept-Language":"en"} });
+    const results = await res.json();
+    if (!results.length) { alert("Location not found. Try a more specific address."); btn.textContent="Search"; btn.disabled=false; return; }
+    const r = results[0];
+    const lat = parseFloat(r.lat), lng = parseFloat(r.lon);
+    map.setView([lat, lng], 17); placeMarker(lat, lng);
+    const addr = r.display_name;
+    document.getElementById("location").value = addr;
+    updateStepProgress();
+    const d = document.getElementById("mapLocationDisplay");
+    d.textContent = addr; d.classList.add("has-pin");
+  } catch { alert("Search failed. Click the map directly."); }
+  btn.textContent = "Search"; btn.disabled = false;
+}
+
+function placeMarker(lat, lng) {
+  if (marker) map.removeLayer(marker);
+  marker = L.marker([lat,lng], {icon:window.markerIcon}).addTo(map);
+  document.getElementById("lat").value = lat;
+  document.getElementById("lng").value = lng;
+}
+
+async function reverseGeocode(lat, lng) {
+  // Store exact coordinates immediately — this is always accurate
+  const coordStr = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  document.getElementById("location").value = coordStr;
+  document.getElementById("lat").value = lat;
+  document.getElementById("lng").value = lng;
+  const d = document.getElementById("mapLocationDisplay");
+  d.textContent = `📍 ${coordStr}`; d.classList.add("has-pin");
+  updateStepProgress();
+
+  try {
+    // Use zoom=16 for street-level accuracy (not 18 which can snap to wrong building)
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=16&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    if (data && data.address) {
+      const a = data.address;
+      // Build address from most specific to least — road first, then area, then city
+      const road    = a.road || a.pedestrian || a.footway || a.path || "";
+      const area    = a.suburb || a.neighbourhood || a.quarter || a.village || "";
+      const city    = a.city || a.town || a.county || "";
+      const state   = a.state || "";
+      const parts   = [road, area, city, state].filter(Boolean);
+      const shortAddr = parts.length >= 2 ? parts.join(", ") : (data.display_name || coordStr);
+      // Always append coords so the exact pin location is preserved
+      const displayText = `${shortAddr}, India (${coordStr})`;
+      document.getElementById("location").value = displayText;
+      d.textContent = `📍 ${shortAddr}`;
+    }
+  } catch {
+    // coords already stored above — no problem
+  }
+}
+
+function useMyLocation() {
+  if (!navigator.geolocation) { alert("Geolocation not supported."); return; }
+
+  // Show loading state on both buttons
+  document.querySelectorAll("button[onclick='useMyLocation()']").forEach(b => {
+    b.textContent = "📍 Locating…"; b.disabled = true;
+  });
+
+  const restore = () => document.querySelectorAll("button[onclick='useMyLocation()']").forEach(b => {
+    b.innerHTML = "📍 My Location"; b.disabled = false;
+  });
+
+  // watchPosition gets multiple readings and picks the most accurate one
+  let bestAccuracy = Infinity;
+  let watchId;
+  let settled = false;
+
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+
+      // Always update map to latest reading
+      map.setView([lat, lng], 17);
+      placeMarker(lat, lng);
+      reverseGeocode(lat, lng);
+
+      // If accuracy is good enough (under 50m) stop immediately
+      if (accuracy < 50) {
+        navigator.geolocation.clearWatch(watchId);
+        restore();
+        settled = true;
+      }
+      // Otherwise keep trying but stop after 8 seconds
+      bestAccuracy = Math.min(bestAccuracy, accuracy);
+    },
+    err => {
+      navigator.geolocation.clearWatch(watchId);
+      restore();
+      if (!settled) alert("Unable to get location. Please click the map manually.");
+    },
+    {
+      enableHighAccuracy: true,   // forces GPS on phones
+      timeout: 10000,
+      maximumAge: 0               // never use cached location
+    }
+  );
+
+  // Stop after 8 seconds regardless — use best reading so far
+  setTimeout(() => {
+    if (!settled) {
+      navigator.geolocation.clearWatch(watchId);
+      restore();
+    }
+  }, 8000);
+}
+
+function updateCharCount() {
+  const len = document.getElementById("description").value.length;
+  const el = document.getElementById("charCounter");
+  el.textContent = `${len} / 1000`;
+  el.className = "char-counter" + (len > 900 ? " over" : len > 700 ? " warn" : "");
+}
+
+function addPreview(id, file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const div = document.createElement("div");
+    div.className = "preview-item"; div.id = "prev_" + id;
+    div.innerHTML = `<img src="${e.target.result}" alt="preview"><div class="uploading-overlay" id="ov_${id}">↑</div>`;
+    document.getElementById("imagePreviews").appendChild(div);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadFile(id, file) {
+  const fd = new FormData(); fd.append("image", file);
+  try {
+    const res = await fetch("/api/upload-image", {method:"POST",credentials:"include",headers:{"X-CSRF-Token":getCsrfToken()},body:fd});
+    const data = await res.json();
+    const overlay = document.getElementById("ov_"+id);
+    if (res.ok) {
+      uploadedImages.push({url:data.url,filename:data.filename,id});
+      if (overlay) overlay.remove();
+      const prev = document.getElementById("prev_"+id);
+      if (prev) { const btn=document.createElement("button"); btn.className="remove-btn"; btn.innerHTML="✕"; btn.onclick=()=>removeImage(id); prev.appendChild(btn); }
+    } else {
+      if (overlay) { overlay.textContent="✗"; overlay.style.background="rgba(239,68,68,.8)"; }
+      showMsg(data.error||"Upload failed.", "error");
+    }
+  } catch { const o=document.getElementById("ov_"+id); if(o){o.textContent="✗";o.style.background="rgba(239,68,68,.8)";} }
+  updateCount();
+}
+
+function removeImage(id) {
+  uploadedImages = uploadedImages.filter(i=>i.id!==id);
+  const el = document.getElementById("prev_"+id); if(el) el.remove();
+  updateCount();
+}
+function updateCount() {
+  const c = document.getElementById("uploadCount");
+  c.textContent = uploadedImages.length > 0 ? `${uploadedImages.length} image${uploadedImages.length>1?"s":""} attached` : "";
+  updateStepProgress();
+}
+
+async function submitComplaint() {
+  const btn = document.getElementById("submitBtn");
+  const body = {
+    title:       document.getElementById("title").value.trim(),
+    description: document.getElementById("description").value.trim(),
+    category:    document.getElementById("category").value,
+    location:    document.getElementById("location").value.trim(),
+    lat:         document.getElementById("lat").value || null,
+    lng:         document.getElementById("lng").value || null,
+    images:      uploadedImages.map(i=>i.url)
+  };
+  if (!body.title)       { showMsg("Please enter a complaint title.", "error"); return; }
+  if (!body.category)    { showMsg("Please select a category.", "error"); return; }
+  if (!body.description) { showMsg("Please enter a description.", "error"); return; }
+  if (!body.location)    { showMsg("Please enter or pin a location.", "error"); return; }
+  if (document.querySelectorAll(".uploading-overlay").length > 0) { showMsg("Please wait for images to finish uploading.", "error"); return; }
+  btn.disabled=true; btn.textContent="Submitting…";
+  try {
+    const res = await fetch("/api/complaints", {method:"POST",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()},body:JSON.stringify(body)});
+    const data = await res.json();
+    if (res.ok) {
+      showMsg(`✅ Submitted! Tracking ID: ${data.complaint_id}`, "success");
+      btn.textContent="Submit Another"; btn.disabled=false;
+      ["title","description"].forEach(id=>document.getElementById(id).value="");
+      document.getElementById("category").value="";
+      document.getElementById("location").value="";
+      document.getElementById("lat").value=""; document.getElementById("lng").value="";
+      if(marker){map.removeLayer(marker);marker=null;}
+      uploadedImages=[]; document.getElementById("imagePreviews").innerHTML="";
+      updateCount(); updateCharCount();
+      const d=document.getElementById("mapLocationDisplay"); d.textContent="Click the map or search to pin your location"; d.classList.remove("has-pin");
+    } else { showMsg(data.error||"Submission failed.","error"); btn.disabled=false; btn.textContent="Submit Complaint"; }
+  } catch { showMsg("Network error.","error"); btn.disabled=false; btn.textContent="Submit Complaint"; }
+}
+
+function showMsg(text, type) {
+  const m=document.getElementById("msg"); m.textContent=text; m.className=`msg ${type}`;
+  m.scrollIntoView({behavior:"smooth",block:"nearest"});
+  if(type==="success") setTimeout(()=>{m.className="msg hidden";},6000);
+}
+
+let pendingEnhancement="", pendingCatSuggestion={category:"",priority:""};
+
+
+// ── STEP PROGRESS TRACKER ────────────────────────────────────
+// Dots go green automatically as the user fills the form
+// Step 1 = Details filled (title + category + description)
+// Step 2 = At least 1 photo uploaded
+// Step 3 = Location pinned
+
+function updateStepProgress() {
+  const title  = (document.getElementById('title')?.value || '').trim();
+  const cat    = document.getElementById('category')?.value || '';
+  const desc   = (document.getElementById('description')?.value || '').trim();
+  const photos = uploadedImages.length > 0;
+  const loc    = (document.getElementById('location')?.value || '').trim();
+
+  const step1done = title && cat && desc;
+  const step2done = photos;
+  const step3done = loc.length > 0;
+
+  setStepState(1, step1done);
+  setStepState(2, step2done);
+  setStepState(3, step3done);
+
+  // Lines go green when the step ahead of them is done
+  const line1 = document.getElementById('step-line-1');
+  const line2 = document.getElementById('step-line-2');
+  if (line1) line1.className = 'step-line' + (step1done ? ' done' : '');
+  if (line2) line2.className = 'step-line' + (step2done ? ' done' : '');
+}
+
+function setStepState(n, done) {
+  const tab = document.getElementById('step-tab-' + n);
+  if (!tab) return;
+  // active = currently the highest reached step, done = fully completed
+  if (done) {
+    tab.className = 'step done';
+  } else {
+    // active if it's the next unfilled step
+    const title  = (document.getElementById('title')?.value || '').trim();
+    const cat    = document.getElementById('category')?.value || '';
+    const desc   = (document.getElementById('description')?.value || '').trim();
+    const step1done = title && cat && desc;
+    const step2done = uploadedImages.length > 0;
+    if (n === 1 && !step1done) tab.className = 'step active';
+    else if (n === 2 && step1done && !step2done) tab.className = 'step active';
+    else if (n === 3 && step2done && !((document.getElementById('location')?.value||'').trim())) tab.className = 'step active';
+    else tab.className = 'step';
+  }
+}
+
+
+async function callAI(prompt, system) {
+  const res = await fetch("/api/ai",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()},body:JSON.stringify({prompt,system})});
+  const data = await res.json();
+  if(!res.ok||data.error) throw new Error(data.error||"AI request failed");
+  return data.text;
+}
+
+async function aiCategorize() {
+  const title=document.getElementById("title").value.trim(), desc=document.getElementById("description").value.trim();
+  if(!title&&!desc){showMsg("Enter a title or description first.","error");return;}
+  const btn=document.getElementById("aiCatBtn"); btn.disabled=true; btn.innerHTML='<span class="ai-spin">⟳</span>';
+  try {
+    const text = await callAI(`Civic complaint title: "${title}"\nDescription: "${desc}"\n\nRespond with ONLY a JSON object like: {"category":"Potholes & Roads","priority":"High","reason":"short reason"}\nCategories: Potholes & Roads, Garbage & Sanitation, Water Supply, Streetlights, Drainage & Flooding, Parks & Public Spaces, Noise Pollution, Other\nPriorities: Low, Medium, High`,"You are a civic complaint classifier. Respond only with valid JSON, no markdown.");
+    const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
+    pendingCatSuggestion=parsed;
+    document.getElementById("catSugText").textContent=`${parsed.category} · ${parsed.priority} — ${parsed.reason}`;
+    document.getElementById("catSuggestion").classList.add("show");
+  } catch(e){showMsg("AI error: "+e.message,"error");}
+  btn.disabled=false; btn.innerHTML='🤖 AI';
+}
+
+function applyCatSuggestion() {
+  const sel=document.getElementById("category");
+  for(let opt of sel.options){if(opt.value===pendingCatSuggestion.category){sel.value=opt.value;break;}}
+  document.getElementById("catSuggestion").classList.remove("show");
+}
+
+async function enhanceDescription() {
+  const desc=document.getElementById("description").value.trim(), title=document.getElementById("title").value.trim();
+  if(!desc){showMsg("Write a description first.","error");return;}
+  const btn=document.getElementById("enhanceBtn"); btn.disabled=true; btn.innerHTML='<span class="ai-spin">⟳</span>';
+  try {
+    const enhanced = await callAI(`Rewrite this civic complaint into a clear, formal report for municipal authorities. Keep it under 100 words.\n\nTitle: ${title}\nOriginal: ${desc}\n\nReturn ONLY the rewritten description.`,"You are a civic writing assistant.");
+    pendingEnhancement=enhanced.trim();
+    document.getElementById("enhanceText").textContent=pendingEnhancement;
+    document.getElementById("enhanceSuggestion").classList.add("show");
+  } catch(e){showMsg("AI error: "+e.message,"error");}
+  btn.disabled=false; btn.innerHTML='✨ Enhance';
+}
+
+function applyEnhancement() {
+  document.getElementById("description").value=pendingEnhancement;
+  document.getElementById("enhanceSuggestion").classList.remove("show"); updateCharCount();
+}
+
+let chatOpen=false;
+function toggleChat(){chatOpen=!chatOpen;document.getElementById("chatWindow").classList.toggle("open",chatOpen);if(chatOpen)document.getElementById("chatInput").focus();}
+
+async function sendChat(){
+  const input=document.getElementById("chatInput"), msg=input.value.trim(); if(!msg)return;
+  input.value=""; appendMsg(msg,"user");
+  const typingId=appendMsg("Thinking…","typing");
+  try{
+    const res=await fetch("/api/ai",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()},body:JSON.stringify({prompt:msg,system:"You are CivicAI, a helpful assistant for citizens using a civic grievance portal. Be concise and friendly. Keep responses under 100 words."})});
+    const data=await res.json(); removeMsg(typingId);
+    if(data.error){appendMsg("⚠️ "+data.error,"bot");}else{appendMsg(data.text||"Sorry, couldn't respond.","bot");}
+  }catch(e){removeMsg(typingId);appendMsg("Connection error: "+e.message,"bot");}
+}
+function appendMsg(text,type){const c=document.getElementById("chatMessages"),id="msg_"+Date.now(),div=document.createElement("div");div.className="chat-msg "+type;div.id=id;div.textContent=text;c.appendChild(div);c.scrollTop=c.scrollHeight;return id;}
+function removeMsg(id){const el=document.getElementById(id);if(el)el.remove();}
+
+fetch("/api/me",{credentials:"include"}).then(r=>r.json()).then(d=>{
+  if(!d.authenticated){window.location.href="/login";return;}
+  document.getElementById("sidebarName").textContent=d.name;
+  document.getElementById("userAvatar").textContent=d.name.charAt(0).toUpperCase();
+  initMap();
+  updateStepProgress();
+});
+</script>
+</body>
+</html>

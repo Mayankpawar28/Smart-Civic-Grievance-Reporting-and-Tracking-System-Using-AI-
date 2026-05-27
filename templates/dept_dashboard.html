@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>localStorage.removeItem("civic_lang");</script>
+<title>Department Dashboard – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="/static/js/avatar.js"></script>
+<style>
+html,body{height:100%;}
+.app-layout{height:100vh;display:flex;overflow:hidden;}
+.dash-main{flex:1;height:100vh;overflow-y:auto;padding:1.5rem 1.75rem;background:#f4f6fb;box-sizing:border-box;width:0;min-width:0;max-width:none;}
+.dash-stats{grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.1rem;}
+.map-section{background:#fff;border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:1.1rem;overflow:hidden;}
+.map-section-head{display:flex;justify-content:space-between;align-items:center;padding:.85rem 1.25rem;border-bottom:1px solid var(--border);background:#fff;flex-wrap:wrap;gap:.5rem;}
+.map-section-title{display:flex;align-items:center;gap:.5rem;font-family:var(--ff-head);font-size:1rem;font-weight:700;color:#0f172a;}
+.map-filter-row{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;}
+.map-filter-btn{padding:.25rem .7rem;border-radius:999px;border:1.5px solid var(--border);background:#fff;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--muted2);transition:all .2s;}
+.map-filter-btn:hover{border-color:#059669;color:#2563eb;}
+.map-filter-btn.active{background:#059669;border-color:#059669;color:#fff;}
+.map-filter-btn.pending.active{background:#d97706;border-color:#d97706;}
+.map-filter-btn.progress.active{background:#2563eb;border-color:#2563eb;}
+.map-filter-btn.resolved.active{background:#059669;border-color:#2563eb;}
+#complaintMap{width:100%;height:320px;}
+#complaintMap img{max-width:none!important;max-height:none!important;box-sizing:content-box!important;}
+.map-section{isolation:isolate;}
+.profile-overlay{z-index:1000!important;}
+.profile-drawer{z-index:1001!important;}
+.map-legend{padding:.55rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:1.1rem;align-items:center;background:#fafbff;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:.35rem;font-size:.73rem;font-weight:600;color:var(--muted2);}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.legend-dot.pending{background:#f59e0b;}
+.legend-dot.progress{background:#3b82f6;}
+.legend-dot.resolved{background:#10b981;}
+.map-complaint-count{margin-left:auto;font-size:.72rem;color:var(--muted);}
+.ai-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer;border:1.5px solid #c7d7fb;background:#eff6ff;color:#2563eb;transition:all .2s;}
+.ai-btn:hover{background:#dbeafe;}
+.ai-btn:disabled{opacity:.5;cursor:not-allowed;}
+.ai-btn .ai-spin{animation:spin .7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.ai-summary-card{border:1.5px solid #c7d7fb;background:linear-gradient(135deg,#f0f4ff,#eff6ff);}
+.ai-summary-output{white-space:pre-wrap;font-size:.85rem;color:#1e293b;line-height:1.65;}
+.dash-lower{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.1rem;align-items:stretch;}
+.dash-lower .dash-card{margin-bottom:0;height:100%;box-sizing:border-box;}
+.dash-card{margin-bottom:1.1rem;}
+.dash-topbar{margin-bottom:1.1rem;}
+/* Dept sidebar accent */
+.sidebar{background:linear-gradient(180deg,#111827 0%,#1e3a5f 100%)!important;}
+.sb-brand-logo{background:rgba(255,255,255,.18)!important;}
+.sb-link:hover,.sb-link.active{background:rgba(255,255,255,.18)!important;color:#fff!important;}
+.sb-logout-btn{border-color:rgba(255,255,255,.25)!important;color:#f87171!important;}
+.sb-logout-btn:hover{background:rgba(239,68,68,.18)!important;}
+.sb-user-role{color:rgba(255,255,255,.5)!important;}
+.dept-tag-sidebar{display:inline-block;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.2);padding:.15rem .6rem;border-radius:999px;font-size:.68rem;font-weight:700;margin-top:.2rem;}
+@media(max-width:1100px){.dash-lower{grid-template-columns:1fr;}}
+@media(max-width:900px){.app-layout{height:auto;overflow:visible;}.dash-main{height:auto;overflow-y:visible;}#complaintMap{height:250px;}.dash-stats{grid-template-columns:1fr 1fr;}}
+
+/* Admin impersonation banner */
+.admin-banner {
+  display:none; background:linear-gradient(90deg,#4f46e5,#7c3aed);
+  color:#fff; padding:.55rem 1.2rem; font-size:.8rem; font-weight:600;
+  align-items:center; justify-content:space-between; gap:1rem;
+  position:sticky; top:0; z-index:999; box-shadow:0 2px 8px rgba(79,70,229,.4);
+}
+.admin-banner.show { display:flex; }
+.admin-banner-text { display:flex; align-items:center; gap:.5rem; }
+.admin-banner-back {
+  padding:.3rem .85rem; background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4);
+  border-radius:6px; color:#fff; font-size:.75rem; font-weight:700; cursor:pointer;
+  font-family:inherit; transition:background .15s;
+}
+.admin-banner-back:hover { background:rgba(255,255,255,.35); }
+</style>
+<script src="/static/js/main.js"></script>
+</head>
+<body class="app-page admin-page">
+  <!-- Admin impersonation banner -->
+  <div class="admin-banner" id="adminBanner">
+    <div class="admin-banner-text">
+      👁️ <strong>Admin View:</strong> You are viewing the <span id="bannerDeptName"></span> department portal
+    </div>
+    <button class="admin-banner-back" onclick="returnToAdmin()">← Back to Admin Panel</button>
+  </div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">🏛️</div>
+      <div class="sb-brand-name">CivicConnect<small id="deptSidebarName">Department</small></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/dept/dashboard" class="sb-link active"><span class="sb-icon">📊</span> Dashboard</a>
+      <a href="/dept/complaints" class="sb-link"><span class="sb-icon">📋</span> Complaints</a>
+      <a href="/dept/analytics" class="sb-link"><span class="sb-icon">📈</span> Analytics</a>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user" onclick="openProfile()" style="cursor:pointer;border-radius:10px;transition:background .2s;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background=''">
+        <div class="sb-avatar" id="userAvatar" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);">D</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sidebarName">Loading…</div>
+          <div class="sb-user-role">Department</div>
+        </div>
+      </div>
+      <button class="sb-logout-btn" onclick="logout()">↩ Logout</button>
+    </div>
+  </aside>
+
+  <main class="app-main dash-main">
+    <div class="dash-topbar">
+      <div>
+        <h1 class="dash-greeting" id="deptHeading">Department Dashboard</h1>
+        <p class="dash-sub" id="deptSubheading">Complaints assigned to your department</p>
+      </div>
+      <span class="topbar-badge">🏙️ CivicConnect</span>
+    </div>
+
+    <div class="dash-stats">
+      <div class="dash-stat-card total"><div class="dsc-icon">📋</div><div class="dsc-body"><div class="dsc-num" id="s-total">—</div><div class="dsc-label">Total Assigned</div></div></div>
+      <div class="dash-stat-card pending"><div class="dsc-icon">⏳</div><div class="dsc-body"><div class="dsc-num" id="s-pending">—</div><div class="dsc-label">Pending</div></div></div>
+      <div class="dash-stat-card progress"><div class="dsc-icon">🔧</div><div class="dsc-body"><div class="dsc-num" id="s-progress">—</div><div class="dsc-label">In Progress</div></div></div>
+      <div class="dash-stat-card resolved"><div class="dsc-icon">✅</div><div class="dsc-body"><div class="dsc-num" id="s-resolved">—</div><div class="dsc-label">Resolved</div></div></div>
+    </div>
+
+    <!-- Map -->
+    <div class="map-section">
+      <div class="map-section-head">
+        <div class="map-section-title">🗺️ Complaints Map</div>
+        <div class="map-filter-row">
+          <button class="map-filter-btn active" id="filter-all" onclick="setMapFilter('all')">All</button>
+          <button class="map-filter-btn pending" id="filter-pending" onclick="setMapFilter('Pending')">⏳ Pending</button>
+          <button class="map-filter-btn progress" id="filter-progress" onclick="setMapFilter('In Progress')">🔧 In Progress</button>
+          <button class="map-filter-btn resolved" id="filter-resolved" onclick="setMapFilter('Resolved')">✅ Resolved</button>
+        </div>
+      </div>
+      <div id="complaintMap"></div>
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-dot pending"></div> Pending</div>
+        <div class="legend-item"><div class="legend-dot progress"></div> In Progress</div>
+        <div class="legend-item"><div class="legend-dot resolved"></div> Resolved</div>
+        <span class="map-complaint-count" id="mapPinCount">Loading pins…</span>
+      </div>
+    </div>
+
+    <!-- Resolution rate + AI -->
+    <div class="dash-lower">
+      <div class="dash-card resolution-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title"><span class="dash-card-icon">📈</span> Resolution Rate</div>
+          <span id="resRate" class="res-rate-pct">—%</span>
+        </div>
+        <div class="res-bar-bg"><div class="res-bar-fill" id="resBar" style="width:0%"></div></div>
+        <div class="res-bar-labels"><span>0%</span><span>Target: 80%</span><span>100%</span></div>
+      </div>
+      <div class="dash-card ai-summary-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title"><span class="dash-card-icon">🤖</span> AI Insights</div>
+          <button class="ai-btn" id="aiSummaryBtn" onclick="generateAISummary()">✨ Generate Report</button>
+        </div>
+        <div id="aiSummaryContent" style="color:var(--muted);font-size:.88rem;line-height:1.6">
+          Click <strong>Generate Report</strong> to get an AI-powered analysis of your department's complaint trends.
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Complaints -->
+    <div class="dash-card">
+      <div class="dash-card-head">
+        <div class="dash-card-title"><span class="dash-card-icon">📄</span> Recent Complaints</div>
+        <a href="/dept/complaints" class="link">View all →</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Citizen</th><th>Title</th><th>Category</th><th>Priority</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody id="tbody"><tr><td colspan="7" class="loading">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Profile Drawer -->
+<div class="profile-overlay" id="profileOverlay" onclick="closeProfile()"></div>
+<div class="profile-drawer" id="profileDrawer">
+  <div class="pd-header">
+    <h3>Department Profile</h3>
+    <button class="pd-close" onclick="closeProfile()">&#x2715;</button>
+  </div>
+  <div class="pd-avatar-section">
+    <div class="pd-avatar" id="pdAvatar" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;font-size:1.8rem;">🏛️</div>
+    <div class="pd-name" id="pdName">—</div>
+    <div class="pd-role-badge" style="background:#eef2ff;color:#2563eb;border:1px solid rgba(37,99,235,.2);" id="pdDeptBadge">Department</div>
+  </div>
+  <div class="pd-info">
+    <div class="pd-info-row"><span class="pd-info-label">Email</span><span class="pd-info-val" id="pdEmail">—</span></div>
+    <div class="pd-info-row"><span class="pd-info-label">Role</span><span class="pd-info-val">Department Staff</span></div>
+  </div>
+  <div class="pd-stats-title">Department Overview</div>
+  <div class="pd-stats">
+    <div class="pd-stat total"><div class="pd-stat-num" id="pdTotal">0</div><div class="pd-stat-label">Total</div></div>
+    <div class="pd-stat pending"><div class="pd-stat-num" id="pdPending">0</div><div class="pd-stat-label">Pending</div></div>
+    <div class="pd-stat progress"><div class="pd-stat-num" id="pdProgress">0</div><div class="pd-stat-label">In Progress</div></div>
+    <div class="pd-stat resolved"><div class="pd-stat-num" id="pdResolved">0</div><div class="pd-stat-label">Resolved</div></div>
+  </div>
+  <button class="pd-logout-btn" onclick="logout()">Sign Out</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let complaintMap, allComplaints=[], activeFilter='all', markerLayer;
+
+function initComplaintMap() {
+  complaintMap=L.map("complaintMap").setView([20.5937,78.9629],5);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:'© OpenStreetMap',maxZoom:19}).addTo(complaintMap);
+  markerLayer=L.layerGroup().addTo(complaintMap);
+}
+function getMarkerColor(status){if(status==='Pending')return'#f59e0b';if(status==='In Progress')return'#3b82f6';if(status==='Resolved')return'#10b981';return'#94a3b8';}
+function createColoredIcon(color){return L.divIcon({className:'',html:`<div style="width:14px;height:14px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);"></div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-10]});}
+function renderMapPins(complaints){
+  markerLayer.clearLayers();
+  const filtered=activeFilter==='all'?complaints:complaints.filter(c=>c.status===activeFilter);
+  const withLoc=filtered.filter(c=>c.lat&&c.lng);
+  withLoc.forEach(c=>{
+    const color=getMarkerColor(c.status);
+    L.marker([parseFloat(c.lat),parseFloat(c.lng)],{icon:createColoredIcon(color)}).addTo(markerLayer)
+     .bindPopup(`<div style="font-family:'DM Sans',sans-serif;font-size:.82rem;min-width:180px"><div style="font-weight:700;color:#0f172a;margin-bottom:.3rem">${c.title}</div><div style="color:#64748b;margin-bottom:.4rem">${c.category}</div><span style="background:${color}22;color:${color};padding:.15rem .5rem;border-radius:999px;font-weight:600;font-size:.72rem;border:1px solid ${color}44">${c.status}</span><div style="color:#94a3b8;font-size:.72rem;margin-top:.3rem">${c.user_name} · ${c.created_at}</div></div>`,{maxWidth:220});
+  });
+  if(withLoc.length>0){const b=L.latLngBounds(withLoc.map(c=>[parseFloat(c.lat),parseFloat(c.lng)]));complaintMap.fitBounds(b,{padding:[40,40],maxZoom:13});}
+  const total=filtered.length,pinned=withLoc.length;
+  document.getElementById("mapPinCount").textContent=`${pinned} pin${pinned!==1?'s':''} shown (${total-pinned} without location)`;
+}
+function setMapFilter(filter){
+  activeFilter=filter;
+  document.querySelectorAll('.map-filter-btn').forEach(b=>b.classList.remove('active'));
+  const id=filter==='all'?'filter-all':filter==='Pending'?'filter-pending':filter==='In Progress'?'filter-progress':'filter-resolved';
+  document.getElementById(id).classList.add('active');
+  renderMapPins(allComplaints);
+}
+
+function openProfile(){
+  document.getElementById('profileOverlay').classList.add('active');
+  document.getElementById('profileDrawer').classList.add('active');
+}
+function closeProfile(){
+  document.getElementById('profileOverlay').classList.remove('active');
+  document.getElementById('profileDrawer').classList.remove('active');
+}
+
+async function generateAISummary(){
+  const btn=document.getElementById("aiSummaryBtn"),content=document.getElementById("aiSummaryContent");
+  btn.disabled=true;btn.innerHTML='<span class="ai-spin">⟳</span> Analyzing…';
+  content.innerHTML='<span style="color:var(--muted)">Analyzing complaint data…</span>';
+  try{
+    const total=document.getElementById("s-total").textContent,pending=document.getElementById("s-pending").textContent,prog=document.getElementById("s-progress").textContent,res=document.getElementById("s-resolved").textContent,rate=document.getElementById("resRate").textContent,dept=document.getElementById("deptHeading").textContent;
+    const aiRes=await fetch("/api/ai",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()},body:JSON.stringify({prompt:`Department: ${dept}\nTotal assigned: ${total}\nPending: ${pending}\nIn Progress: ${prog}\nResolved: ${res}\nResolution rate: ${rate}\n\nProvide a brief summary (3-4 sentences) and 2-3 actionable recommendations for this department.`,system:"You are a municipal analytics AI. Provide concise, department-specific insights."})});
+    const data=await aiRes.json();
+    content.innerHTML=`<div class="ai-summary-output">${data.text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+  }catch{content.innerHTML='<span style="color:#ef4444">Failed to generate report.</span>';}
+  btn.disabled=false;btn.innerHTML='✨ Generate Report';
+}
+
+
+
+async function init(){
+  const me=await fetch("/api/dept/me",{credentials:"include"}).then(r=>r.json());
+  if(!me.authenticated){window.location.href="/login";return;}
+  const dept=me.department;
+  document.getElementById("deptHeading").textContent=dept+" Dashboard";
+  document.getElementById("deptSubheading").textContent="Complaints assigned to "+dept;
+  document.getElementById("deptSidebarName").textContent=dept;
+  document.getElementById("sidebarName").textContent=dept;
+  document.getElementById("userAvatar").textContent=dept.charAt(0);
+  document.getElementById("pdName").textContent=dept;
+  document.getElementById("pdEmail").textContent=me.email;
+  document.getElementById("pdDeptBadge").textContent=dept;
+
+  initComplaintMap();
+  const [stats,complaints]=await Promise.all([
+    fetch("/api/dept/stats",{credentials:"include"}).then(r=>r.json()),
+    fetch("/api/dept/complaints",{credentials:"include"}).then(r=>r.json())
+  ]);
+  document.getElementById("s-total").textContent=stats.total;
+  document.getElementById("s-pending").textContent=stats.pending;
+  document.getElementById("s-progress").textContent=stats.in_progress;
+  document.getElementById("s-resolved").textContent=stats.resolved;
+  document.getElementById("pdTotal").textContent=stats.total;
+  document.getElementById("pdPending").textContent=stats.pending;
+  document.getElementById("pdProgress").textContent=stats.in_progress;
+  document.getElementById("pdResolved").textContent=stats.resolved;
+  const rate=stats.total>0?Math.round((stats.resolved/stats.total)*100):0;
+  document.getElementById("resRate").textContent=rate+"%";
+  document.getElementById("resBar").style.width=rate+"%";
+  allComplaints=complaints.data||[];
+  renderMapPins(allComplaints);
+  const tbody=document.getElementById("tbody");
+  tbody.innerHTML=allComplaints.slice(0,10).map(c=>`<tr><td><code>${c.complaint_id}</code></td><td>${c.user_name}</td><td>${c.title}</td><td><span class="badge cat">${c.category}</span></td><td><span class="badge pri-${c.priority.toLowerCase()}">${c.priority}</span></td><td><span class="badge status-${c.status.toLowerCase().replace(" ","-")}">${c.status}</span></td><td>${c.created_at}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">No complaints assigned yet.</td></tr>`;
+}
+init();
+
+// Admin impersonation banner
+async function checkAdminBanner() {
+  try {
+    const res = await fetch('/api/dept/me', {credentials:'include'});
+    const d = await res.json();
+    if (!d.authenticated) { window.location.href = '/login'; return; }
+    // Check if impersonating (admin opened this)
+    const meRes = await fetch('/api/me', {credentials:'include'});
+    const me = await meRes.json();
+    if (me && me.prev_admin_id) {
+      const banner = document.getElementById('adminBanner');
+      if (banner) { banner.classList.add('show'); }
+      const nameEl = document.getElementById('bannerDeptName');
+      if (nameEl) nameEl.textContent = d.department;
+    }
+    return d;
+  } catch(e) { return null; }
+}
+
+async function returnToAdmin() {
+  const res = await fetch('/admin/restore-session', {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRF-Token':getCsrfToken()}
+  });
+  const data = await res.json();
+  if (res.ok) window.location.href = data.redirect;
+}
+
+</script>
+</body>
+</html>

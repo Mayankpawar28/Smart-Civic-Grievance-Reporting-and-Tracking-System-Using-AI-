@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Department Analytics – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/main.js"></script>
+<style>
+.sidebar{background:linear-gradient(180deg,#111827 0%,#1e3a5f 100%)!important;}
+.sb-brand-logo{background:rgba(255,255,255,.18)!important;}
+.sb-link:hover,.sb-link.active{background:rgba(255,255,255,.18)!important;color:#fff!important;}
+.sb-logout-btn{border-color:rgba(255,255,255,.25)!important;color:#f87171!important;}
+.sb-logout-btn:hover{background:rgba(239,68,68,.18)!important;}
+.admin-banner{display:none;background:linear-gradient(90deg,#4f46e5,#7c3aed);color:#fff;padding:.55rem 1.2rem;font-size:.8rem;font-weight:600;align-items:center;justify-content:space-between;gap:1rem;position:sticky;top:0;z-index:999;box-shadow:0 2px 8px rgba(79,70,229,.4);}
+.admin-banner.show{display:flex;}
+.admin-banner-back{padding:.3rem .85rem;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:6px;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;}
+.an-main{flex:1;padding:2rem 2.2rem;box-sizing:border-box;overflow-x:hidden;background:#f0f2f8;}
+.an-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.8rem;}
+.an-title{font-family:"Playfair Display",serif;font-size:1.7rem;font-weight:800;color:#0f172a;}
+.an-sub{font-size:.82rem;color:#64748b;margin-top:.2rem;}
+.an-filters{display:flex;gap:.5rem;align-items:center;}
+.an-filter-btn{padding:.4rem .85rem;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:.77rem;font-weight:600;color:#475569;cursor:pointer;font-family:inherit;transition:all .15s;}
+.an-filter-btn.active,.an-filter-btn:hover{background:#059669;color:#fff;border-color:#2563eb;}
+.an-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.2rem;}
+.an-kpi{background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;padding:1rem 1.15rem;box-shadow:0 1px 4px rgba(0,0,0,.05);position:relative;overflow:hidden;}
+.an-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--kc,#2563eb);}
+.an-kpi-icon{font-size:1.2rem;margin-bottom:.35rem;}
+.an-kpi-num{font-size:1.55rem;font-weight:800;color:#0f172a;line-height:1;}
+.an-kpi-lbl{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-top:.25rem;}
+.an-insight-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1.1rem;}
+.an-insight{border-radius:12px;padding:1rem 1.1rem;color:#fff;}
+.an-insight.green{background:linear-gradient(135deg,#1e3a5f,#2563eb);}
+.an-insight.amber{background:linear-gradient(135deg,#d97706,#f59e0b);}
+.an-insight.indigo{background:linear-gradient(135deg,#4f46e5,#6366f1);}
+.an-insight-label{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.8;margin-bottom:.25rem;}
+.an-insight-val{font-size:1.25rem;font-weight:800;line-height:1.25;}
+.an-insight-sub{font-size:.72rem;opacity:.85;margin-top:.25rem;}
+.an-card{background:#fff;border:1.5px solid #e5e7eb;border-radius:13px;padding:1.2rem 1.3rem;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+.an-card-title{font-size:.77rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#374151;margin-bottom:.9rem;display:flex;align-items:center;justify-content:space-between;}
+.an-card-title span{font-size:.67rem;color:#94a3b8;font-weight:500;text-transform:none;letter-spacing:0;}
+.an-row2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.an-row32{display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-bottom:1rem;}
+.res-bar-track{background:#e5e7eb;border-radius:999px;height:10px;overflow:hidden;margin:.7rem 0 .3rem;}
+.res-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2563eb,#6366f1);transition:width .8s ease;}
+.res-bar-labels{display:flex;justify-content:space-between;font-size:.7rem;color:#94a3b8;}
+.res-rate-num{font-size:1.6rem;font-weight:800;color:#2563eb;}
+.sla-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;}
+.sla-label{font-size:.76rem;font-weight:600;color:#374151;width:150px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sla-bar-bg{flex:1;background:#f1f5f9;border-radius:999px;height:8px;overflow:hidden;}
+.sla-bar-fill{height:100%;border-radius:999px;}
+.sla-pct{font-size:.72rem;font-weight:700;color:#2563eb;min-width:32px;text-align:right;}
+.ai-card{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1.5px solid #a7f3d0;border-radius:13px;padding:1.2rem 1.3rem;}
+.ai-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+.ai-card-title{font-size:.85rem;font-weight:700;color:#1e3a5f;display:flex;align-items:center;gap:.4rem;}
+.ai-gen-btn{padding:.35rem .85rem;background:#2563eb;color:#fff;border:none;border-radius:7px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:.3rem;}
+.ai-gen-btn:hover{background:#047857;}
+.ai-gen-btn:disabled{opacity:.6;cursor:not-allowed;}
+.ai-output{font-size:.82rem;color:#0f172a;line-height:1.6;white-space:pre-wrap;}
+.ai-placeholder{font-size:.82rem;color:#6b7280;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body class="app-page admin-page">
+
+<div class="admin-banner" id="adminBanner">
+  <div style="display:flex;align-items:center;gap:.5rem;">👁️ <strong>Admin View:</strong> Viewing <span id="bannerDeptName"></span> department portal</div>
+  <button class="admin-banner-back" onclick="returnToAdmin()">← Back to Admin Panel</button>
+</div>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">🏛️</div>
+      <div class="sb-brand-name">CivicConnect<small id="deptSidebarName">Department</small></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/dept/dashboard" class="sb-link">📊 Dashboard</a>
+      <a href="/dept/complaints" class="sb-link">📋 Complaints</a>
+      <a href="/dept/analytics" class="sb-link active">📈 Analytics</a>
+    </nav>
+    <div class="sb-footer">
+      <button class="sb-logout-btn" onclick="logout()">↩ Logout</button>
+    </div>
+  </aside>
+
+  <main class="an-main">
+    <div class="an-header">
+      <div>
+        <div class="an-title" id="analyticsTitle">Analytics</div>
+        <div class="an-sub" id="analyticsSub">Complaint trends and distribution for your department</div>
+      </div>
+      <div class="an-filters">
+        <button class="an-filter-btn active">All Time</button>
+        <button class="an-filter-btn">Last 30 Days</button>
+        <button class="an-filter-btn">Last 7 Days</button>
+      </div>
+    </div>
+
+    <div class="an-kpi-row">
+      <div class="an-kpi" style="--kc:#374151"><div class="an-kpi-icon">📋</div><div class="an-kpi-num" id="s-total">—</div><div class="an-kpi-lbl">Total Assigned</div></div>
+      <div class="an-kpi" style="--kc:#f59e0b"><div class="an-kpi-icon">⏳</div><div class="an-kpi-num" id="s-pending">—</div><div class="an-kpi-lbl">Pending</div></div>
+      <div class="an-kpi" style="--kc:#3b82f6"><div class="an-kpi-icon">🔧</div><div class="an-kpi-num" id="s-progress">—</div><div class="an-kpi-lbl">In Progress</div></div>
+      <div class="an-kpi" style="--kc:#2563eb"><div class="an-kpi-icon">✅</div><div class="an-kpi-num" id="s-resolved">—</div><div class="an-kpi-lbl">Resolved</div></div>
+    </div>
+
+    <div class="an-insight-row">
+      <div class="an-insight green">
+        <div class="an-insight-label">Resolution Rate</div>
+        <div class="an-insight-val" id="ins-rate">0%</div>
+        <div class="an-insight-sub">Target: 80% · <span id="ins-status">—</span></div>
+      </div>
+      <div class="an-insight amber">
+        <div class="an-insight-label">Pending Backlog</div>
+        <div class="an-insight-val" id="ins-backlog">—</div>
+        <div class="an-insight-sub">Complaints awaiting action</div>
+      </div>
+      <div class="an-insight indigo">
+        <div class="an-insight-label">Top Category</div>
+        <div class="an-insight-val" id="ins-top-cat" style="font-size:.95rem">—</div>
+        <div class="an-insight-sub">Most frequent complaint type</div>
+      </div>
+    </div>
+
+    <div class="an-row2">
+      <div class="an-card">
+        <div class="an-card-title">Status Distribution <span>Current breakdown</span></div>
+        <canvas id="statusChart" height="200"></canvas>
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Priority Breakdown <span>By urgency level</span></div>
+        <canvas id="priorityChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="an-row32">
+      <div class="an-card">
+        <div class="an-card-title">Monthly Trend <span>Complaints over time</span></div>
+        <canvas id="monthlyChart" height="160"></canvas>
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Category Breakdown <span>Issue types</span></div>
+        <canvas id="categoryChart" height="160"></canvas>
+      </div>
+    </div>
+
+    <div class="an-row2">
+      <div class="an-card">
+        <div class="an-card-title">Resolution Progress</div>
+        <div class="res-rate-num" id="res-rate-big">0%</div>
+        <div class="res-bar-track"><div class="res-bar-fill" id="resBar" style="width:0%"></div></div>
+        <div class="res-bar-labels"><span>0%</span><span>Target: 80%</span><span>100%</span></div>
+        <div style="margin-top:1rem" id="slaList"></div>
+      </div>
+      <div class="ai-card">
+        <div class="ai-card-header">
+          <div class="ai-card-title">🤖 AI Insights</div>
+          <button class="ai-gen-btn" id="aiBtn" onclick="generateAIReport()">✨ Generate Report</button>
+        </div>
+        <div id="aiOutput" class="ai-placeholder">Click <strong>Generate Report</strong> to get an AI-powered analysis of your department's complaint trends.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let analyticsData = null;
+function makeChart(id, type, labels, values, colors, lbl) {
+  const ex = Chart.getChart(id); if(ex) ex.destroy();
+  const isLine = type==="line";
+  const isBar  = type==="bar";
+  const palette = colors || ["#4f46e5","#f59e0b","#10b981","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316"];
+  new Chart(document.getElementById(id), {
+    type,
+    data: { labels, datasets: [{
+      label: lbl || "Complaints",
+      data: values,
+      backgroundColor: isLine ? "rgba(5,150,105,.15)" : palette.slice(0, values.length),
+      borderColor:     isLine ? "#059669" : (isBar ? palette.slice(0, values.length) : "#fff"),
+      borderWidth:     isBar ? 0 : 2,
+      borderRadius:    isBar ? 8 : 0,
+      fill:            isLine,
+      tension:         isLine ? 0.4 : 0,
+      pointBackgroundColor: isLine ? "#059669" : undefined,
+      pointRadius:          isLine ? 5 : undefined,
+      pointHoverRadius:     isLine ? 8 : undefined,
+    }]},
+    options: {
+      responsive: true,
+      animation: { duration: 900, easing: "easeOutQuart" },
+      plugins: {
+        legend: { display: !isLine, position: isBar ? "bottom" : "right",
+          labels: { padding: 14, font: { size: 12 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y ?? ctx.parsed} complaints` } }
+      },
+      scales: isLine || isBar ? {
+        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: "rgba(0,0,0,.06)" } },
+        x: { grid: { display: false } }
+      } : {}
+    }
+  });
+}
+function renderSLA(cats){
+  const list=document.getElementById("slaList");
+  const total=Object.values(cats).reduce((s,v)=>s+v,0)||1;
+  list.innerHTML=Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([cat,count])=>{
+    const pct=Math.round((count/total)*100);
+    const col=pct>50?"#ef4444":pct>25?"#f59e0b":"#059669";
+    return `<div class="sla-row"><div class="sla-label" title="${cat}">${cat}</div><div class="sla-bar-bg"><div class="sla-bar-fill" style="width:${pct}%;background:${col}"></div></div><div class="sla-pct">${count}</div></div>`;
+  }).join("");
+}
+async function init(){
+  const me=await fetch("/api/dept/me",{credentials:"include"}).then(r=>r.json());
+  if(!me.authenticated){window.location.href="/login";return;}
+  document.getElementById("deptSidebarName").textContent=me.department;
+  document.getElementById("analyticsTitle").textContent=me.department+" – Analytics";
+  document.getElementById("analyticsSub").textContent="Complaint trends and distribution for "+me.department;
+  const d=await fetch("/api/dept/analytics",{credentials:"include"}).then(r=>r.json());
+  analyticsData=d;
+  document.getElementById("s-total").textContent=d.total;
+  document.getElementById("s-pending").textContent=d.pending;
+  document.getElementById("s-progress").textContent=d.in_progress;
+  document.getElementById("s-resolved").textContent=d.resolved;
+  const rate=d.total>0?Math.round((d.resolved/d.total)*100):0;
+  document.getElementById("ins-rate").textContent=rate+"%";
+  document.getElementById("ins-status").textContent=rate>=80?"✅ On target":"⚠️ Below target";
+  document.getElementById("ins-backlog").textContent=d.pending;
+  document.getElementById("res-rate-big").textContent=rate+"%";
+  document.getElementById("resBar").style.width=Math.min(rate,100)+"%";
+  const cats=d.categories||{};
+  const topCat=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById("ins-top-cat").textContent=topCat?topCat[0]:"N/A";
+  makeChart("statusChart","doughnut",["Pending","In Progress","Resolved"],[d.pending,d.in_progress,d.resolved],["#f59e0b","#3b82f6","#10b981"]);
+  const pri=d.priorities||{};makeChart("priorityChart","pie",Object.keys(pri),Object.values(pri),["#10b981","#f59e0b","#ef4444"]);
+  const mon=d.monthly||[];makeChart("monthlyChart","line",mon.map(m=>m.label),mon.map(m=>m.count),["#059669"]);
+  makeChart("categoryChart","bar",Object.keys(cats),Object.values(cats));
+  renderSLA(cats);
+  checkAdminBanner();
+}
+async function generateAIReport(){
+  if(!analyticsData)return;
+  const btn=document.getElementById("aiBtn"),out=document.getElementById("aiOutput");
+  btn.disabled=true;btn.innerHTML='<span style="display:inline-block;animation:spin .7s linear infinite">⟳</span> Generating…';
+  out.className="ai-output";out.textContent="Analysing your department data…";
+  const d=analyticsData;
+  const rate=d.total>0?Math.round((d.resolved/d.total)*100):0;
+  const topCats=Object.entries(d.categories||{}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k} (${v})`).join(", ");
+  const prompt=`Write a concise department performance report (max 120 words). Stats: Total=${d.total}, Pending=${d.pending}, In Progress=${d.in_progress}, Resolved=${d.resolved}, Resolution Rate=${rate}%, Top Categories: ${topCats||"N/A"}. Monthly trend: ${JSON.stringify(d.monthly)}. Highlight key concerns and one actionable recommendation.`;
+  try{
+    const res=await fetch("/api/ai",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()},body:JSON.stringify({prompt,system:"You are a concise civic analytics assistant."})});
+    const data=await res.json();out.textContent=data.text||"Could not generate report.";
+  }catch(e){out.textContent="Error generating report.";}
+  btn.disabled=false;btn.innerHTML="✨ Generate Report";
+}
+async function checkAdminBanner(){
+  try{
+    const me=await fetch("/api/me",{credentials:"include"}).then(r=>r.json());
+    if(me&&me.prev_admin_id){
+      document.getElementById("adminBanner").classList.add("show");
+      const dm=await fetch("/api/dept/me",{credentials:"include"}).then(r=>r.json());
+      document.getElementById("bannerDeptName").textContent=dm.department||"";
+    }
+  }catch(e){}
+}
+async function returnToAdmin(){
+  const res=await fetch("/admin/restore-session",{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()}});
+  const data=await res.json();if(res.ok)window.location.href=data.redirect;
+}
+init();
+</script>
+</body>
+</html>

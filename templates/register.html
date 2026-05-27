@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+.step-indicator {
+  display: flex; align-items: flex-start; gap: 0; margin-bottom: 1.6rem;
+}
+.step-col { display: flex; flex-direction: column; align-items: center; gap: .2rem; }
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; transition: all .3s;
+}
+.step-dot.active   { background: #4f46e5; color: #fff; }
+.step-dot.done     { background: #22c55e; color: #fff; }
+.step-dot.inactive { background: #e5e7eb; color: #9ca3af; }
+.step-line { flex: 1; height: 2px; margin-top: 13px; background: #e5e7eb; transition: background .3s; }
+.step-line.done { background: #22c55e; }
+.step-label { font-size: .68rem; color: #9ca3af; font-weight: 600; text-align: center; white-space: nowrap; }
+
+.step-panel { display: none; }
+.step-panel.active { display: block; }
+
+.otp-boxes { display: flex; gap: .6rem; justify-content: center; margin: 1.2rem 0; }
+.otp-box {
+  width: 46px; height: 54px; text-align: center; font-size: 1.5rem; font-weight: 700;
+  border: 2px solid #d1d5db; border-radius: 10px; outline: none;
+  font-family: 'DM Sans', sans-serif; color: #1e293b; transition: border-color .2s, box-shadow .2s;
+}
+.otp-box:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+.otp-box.filled { border-color: #4f46e5; }
+.otp-box.error  { border-color: #ef4444 !important; animation: shake .3s; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+
+.otp-hint { text-align: center; font-size: .83rem; color: #64748b; margin-bottom: .4rem; line-height: 1.6; }
+.otp-hint strong { color: #1e293b; }
+
+.resend-row { text-align: center; font-size: .82rem; color: #9ca3af; margin-top: .7rem; }
+.resend-btn { background: none; border: none; color: #4f46e5; font-weight: 600; cursor: pointer; font-family: inherit; font-size: .82rem; padding: 0; }
+.resend-btn:disabled { color: #9ca3af; cursor: default; }
+
+.success-wrap { text-align: center; padding: 1rem 0; }
+.success-icon { font-size: 3.5rem; margin-bottom: .6rem; }
+.progress-bar { height: 4px; background: #e5e7eb; border-radius: 99px; overflow: hidden; margin: 1rem auto 0; max-width: 160px; }
+.progress-fill { height: 100%; background: #4f46e5; border-radius: 99px; animation: prog 2.2s linear forwards; }
+@keyframes prog { from{width:0} to{width:100%} }
+</style>
+</head>
+<body class="auth-page split-auth-page">
+<div class="split-auth-card">
+  <div class="split-left">
+    <div class="split-brand"><span class="split-brand-icon">C</span> CivicConnect</div>
+    <div class="split-tagline">Join the<br>Movement.</div>
+    <p class="split-desc">Create your verified profile to report civic issues and track your city's progress.</p>
+    <ul class="split-features">
+      <li>✓ Email OTP verified accounts</li>
+      <li>✓ Secure &amp; private reporting</li>
+      <li>✓ Verified municipal resolution</li>
+    </ul>
+  </div>
+
+  <div class="split-right">
+    <h2 class="split-title">Create Citizen Profile</h2>
+    <p class="split-subtitle" id="panel-sub">Your email will be verified with a one-time code.</p>
+
+    <!-- Step indicator -->
+    <div class="step-indicator">
+      <div class="step-col">
+        <div class="step-dot active" id="dot1">1</div>
+        <div class="step-label">Details</div>
+      </div>
+      <div class="step-line" id="line1"></div>
+      <div class="step-col">
+        <div class="step-dot inactive" id="dot2">2</div>
+        <div class="step-label">Verify Email</div>
+      </div>
+      <div class="step-line" id="line2"></div>
+      <div class="step-col">
+        <div class="step-dot inactive" id="dot3">3</div>
+        <div class="step-label">Done</div>
+      </div>
+    </div>
+
+    <div id="msg" class="msg hidden"></div>
+
+    <!-- Step 1: Form -->
+    <div class="step-panel active" id="step1">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="name" placeholder="Your full name">
+        </div>
+        <div class="form-group">
+          <label>Contact Number</label>
+          <input type="tel" id="phone" placeholder="+91">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="yourname@example.com">
+      </div>
+      <div class="form-group">
+        <label>State</label>
+        <select id="ward">
+          <option value="">Select your state</option>
+          <option>Andhra Pradesh</option>
+          <option>Arunachal Pradesh</option>
+          <option>Assam</option>
+          <option>Bihar</option>
+          <option>Chhattisgarh</option>
+          <option>Goa</option>
+          <option>Gujarat</option>
+          <option>Haryana</option>
+          <option>Himachal Pradesh</option>
+          <option>Jharkhand</option>
+          <option>Karnataka</option>
+          <option>Kerala</option>
+          <option>Madhya Pradesh</option>
+          <option>Maharashtra</option>
+          <option>Manipur</option>
+          <option>Meghalaya</option>
+          <option>Mizoram</option>
+          <option>Nagaland</option>
+          <option>Odisha</option>
+          <option>Punjab</option>
+          <option>Rajasthan</option>
+          <option>Sikkim</option>
+          <option>Tamil Nadu</option>
+          <option>Telangana</option>
+          <option>Tripura</option>
+          <option>Uttar Pradesh</option>
+          <option>Uttarakhand</option>
+          <option>West Bengal</option>
+          <option>Andaman and Nicobar Islands</option>
+          <option>Chandigarh</option>
+          <option>Dadra and Nagar Haveli and Daman and Diu</option>
+          <option>Delhi</option>
+          <option>Jammu and Kashmir</option>
+          <option>Ladakh</option>
+          <option>Lakshadweep</option>
+          <option>Puducherry</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="Min 6 characters">
+        </div>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <input type="password" id="confirm" placeholder="">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full split-btn" id="regBtn" onclick="doRegister()">
+        Send Verification Code →
+      </button>
+      <div class="split-divider"></div>
+      <p class="split-switch">Already have an account? <a href="/login">Login</a></p>
+    </div>
+
+    <!-- Step 2: OTP -->
+    <div class="step-panel" id="step2">
+      <div class="otp-hint">
+        A 6-digit code was sent to<br><strong id="otp-email-display">—</strong><br>
+        <span style="font-size:.75rem;color:#94a3b8;">Check your inbox (and spam folder)</span>
+      </div>
+      <div class="otp-boxes">
+        <input class="otp-box" id="otp0" maxlength="1" inputmode="numeric">
+        <input class="otp-box" id="otp1" maxlength="1" inputmode="numeric">
+        <input class="otp-box" id="otp2" maxlength="1" inputmode="numeric">
+        <input class="otp-box" id="otp3" maxlength="1" inputmode="numeric">
+        <input class="otp-box" id="otp4" maxlength="1" inputmode="numeric">
+        <input class="otp-box" id="otp5" maxlength="1" inputmode="numeric">
+      </div>
+      <button class="btn btn-primary btn-full split-btn" id="verifyBtn" onclick="doVerify()">Verify &amp; Create Account</button>
+      <div class="resend-row">
+        Didn't receive it?
+        <button class="resend-btn" id="resendBtn" onclick="resendOtp()" disabled>
+          Resend in <span id="timerDisplay">60s</span>
+        </button>
+      </div>
+      <div style="margin-top:.9rem;text-align:center;">
+        <button class="btn btn-outline btn-sm" onclick="goBack()">← Change Details</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div class="step-panel" id="step3">
+      <div class="success-wrap">
+        <div class="success-icon">🎉</div>
+        <h3 style="color:#16a34a;font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:.4rem;">Email Verified!</h3>
+        <p style="color:#475569;font-size:.9rem;">Your account has been created. Redirecting to login…</p>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let pendingEmail = "";
+let timerInterval = null;
+let pendingName = "", pendingPass = "";
+
+// OTP box logic
+document.querySelectorAll(".otp-box").forEach((box, i) => {
+  box.addEventListener("input", e => {
+    const val = e.target.value.replace(/\D/g, "");
+    e.target.value = val.slice(-1);
+    e.target.classList.toggle("filled", val !== "");
+    if (val && i < 5) document.getElementById(`otp${i+1}`).focus();
+    if (getOtp().length === 6) doVerify();
+  });
+  box.addEventListener("keydown", e => {
+    if (e.key === "Backspace" && !e.target.value && i > 0)
+      document.getElementById(`otp${i-1}`).focus();
+  });
+  box.addEventListener("paste", e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g,"").slice(0,6);
+    text.split("").forEach((ch, j) => {
+      const b = document.getElementById(`otp${j}`);
+      if (b) { b.value = ch; b.classList.add("filled"); }
+    });
+    if (text.length === 6) setTimeout(doVerify, 80);
+  });
+});
+
+function getOtp() {
+  return Array.from({length:6}, (_,i) => document.getElementById(`otp${i}`).value).join("");
+}
+
+function clearOtpBoxes(shake = false) {
+  for (let i = 0; i < 6; i++) {
+    const b = document.getElementById(`otp${i}`);
+    b.value = ""; b.classList.remove("filled");
+    if (shake) { b.classList.add("error"); setTimeout(() => b.classList.remove("error"), 400); }
+  }
+  if (shake) document.getElementById("otp0").focus();
+}
+
+function goToStep(n) {
+  [1,2,3].forEach(s => document.getElementById(`step${s}`).classList.toggle("active", s === n));
+  ["dot1","dot2","dot3"].forEach((id, idx) => {
+    const d = document.getElementById(id);
+    d.className = "step-dot " + (idx+1 < n ? "done" : idx+1 === n ? "active" : "inactive");
+    d.textContent = idx+1 < n ? "✓" : idx+1;
+  });
+  document.getElementById("line1").className = "step-line" + (n > 1 ? " done" : "");
+  document.getElementById("line2").className = "step-line" + (n > 2 ? " done" : "");
+}
+
+function goBack() {
+  clearInterval(timerInterval);
+  clearOtpBoxes();
+  document.getElementById("msg").className = "msg hidden";
+  goToStep(1);
+}
+
+function startTimer(s = 60) {
+  const btn = document.getElementById("resendBtn");
+  const disp = document.getElementById("timerDisplay");
+  btn.disabled = true;
+  let left = s;
+  disp.textContent = `${left}s`;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    left--;
+    if (left <= 0) {
+      clearInterval(timerInterval);
+      btn.innerHTML = "Resend Code";
+      btn.disabled = false;
+    } else {
+      disp.textContent = `${left}s`;
+    }
+  }, 1000);
+}
+
+async function doRegister() {
+  const msg   = document.getElementById("msg");
+  const btn   = document.getElementById("regBtn");
+  const name  = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim().toLowerCase();
+  const pass  = document.getElementById("password").value;
+  const conf  = document.getElementById("confirm").value;
+
+  if (!name || !email || !pass) {
+    msg.textContent = "Please fill in all required fields."; msg.className = "msg error"; return;
+  }
+  if (!email.includes("@") || !email.includes(".")) {
+    msg.textContent = "Please enter a valid email address."; msg.className = "msg error"; return;
+  }
+  if (pass !== conf) {
+    msg.textContent = "Passwords do not match."; msg.className = "msg error"; return;
+  }
+  if (pass.length < 6) {
+    msg.textContent = "Password must be at least 6 characters."; msg.className = "msg error"; return;
+  }
+
+  btn.disabled = true; btn.textContent = "Sending OTP…";
+  msg.className = "msg hidden";
+
+  const res  = await fetch("/api/register", {
+    method:"POST", credentials:"include",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({name, email, password: pass, phone: document.getElementById("phone").value.trim()})
+  });
+  const data = await res.json();
+
+  if (res.ok) {
+    pendingEmail = email; pendingName = name; pendingPass = pass;
+    document.getElementById("otp-email-display").textContent = email;
+    goToStep(2);
+    startTimer(60);
+    setTimeout(() => document.getElementById("otp0").focus(), 100);
+  } else {
+    msg.textContent = data.error; msg.className = "msg error";
+  }
+  btn.disabled = false; btn.textContent = "Send Verification Code →";
+}
+
+async function doVerify() {
+  const msg = document.getElementById("msg");
+  const btn = document.getElementById("verifyBtn");
+  const otp = getOtp();
+  if (otp.length < 6) {
+    msg.textContent = "Please enter the full 6-digit code."; msg.className = "msg error"; return;
+  }
+  btn.disabled = true; btn.textContent = "Verifying…";
+  msg.className = "msg hidden";
+
+  const res  = await fetch("/api/verify-otp", {
+    method:"POST", credentials:"include",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({email: pendingEmail, otp})
+  });
+  const data = await res.json();
+
+  if (res.ok) {
+    clearInterval(timerInterval);
+    goToStep(3);
+    setTimeout(() => window.location.href = "/login", 2300);
+  } else {
+    clearOtpBoxes(true);
+    msg.textContent = data.error; msg.className = "msg error";
+    btn.disabled = false; btn.textContent = "Verify & Create Account";
+  }
+}
+
+async function resendOtp() {
+  const msg = document.getElementById("msg");
+  const res = await fetch("/api/register", {
+    method:"POST", credentials:"include",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({name: pendingName, email: pendingEmail, password: pendingPass})
+  });
+  const data = await res.json();
+  if (res.ok) {
+    msg.textContent = "✅ New OTP sent to your Gmail."; msg.className = "msg success";
+    clearOtpBoxes(); startTimer(60);
+    document.getElementById("otp0").focus();
+  } else {
+    msg.textContent = data.error; msg.className = "msg error";
+  }
+}
+</script>
+</body>
+</html>

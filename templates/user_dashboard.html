@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="/static/js/avatar.js"></script>
+
+<style>
+.ai-btn { display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:1.5px solid #c7d2fe;background:#eef2ff;color:#4f46e5;transition:all .2s; }
+.ai-btn:disabled { opacity:.5;cursor:not-allowed; }
+.ai-btn .ai-spin { animation:spin .7s linear infinite;display:inline-block; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.chatbot-fab { position:fixed;bottom:2rem;right:2rem;z-index:300;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);border:none;cursor:pointer;box-shadow:0 4px 20px rgba(79,70,229,.4);font-size:1.4rem;color:#fff;transition:transform .2s;display:flex;align-items:center;justify-content:center; }
+.chatbot-fab:hover { transform:scale(1.1); }
+.chatbot-window { position:fixed;bottom:6rem;right:2rem;z-index:300;width:360px;height:480px;background:#fff;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,.15);display:flex;flex-direction:column;overflow:hidden;transform:scale(0);transform-origin:bottom right;transition:transform .25s cubic-bezier(.4,0,.2,1);border:1px solid var(--border); }
+.chatbot-window.open { transform:scale(1); }
+.chat-header { padding:1rem 1.2rem;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;display:flex;align-items:center;gap:.7rem; }
+.chat-header-icon { font-size:1.3rem; }
+.chat-title { font-weight:700;font-size:.95rem; }
+.chat-sub { font-size:.75rem;opacity:.8; }
+.chat-close { margin-left:auto;background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer;opacity:.8; }
+.chat-messages { flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.75rem; }
+.chat-msg { max-width:85%;padding:.65rem .9rem;border-radius:12px;font-size:.88rem;line-height:1.5; }
+.chat-msg.bot { background:#f1f5f9;color:#1e293b;align-self:flex-start;border-bottom-left-radius:4px; }
+.chat-msg.user { background:#4f46e5;color:#fff;align-self:flex-end;border-bottom-right-radius:4px; }
+.chat-msg.typing { background:#f1f5f9;color:#94a3b8; }
+.chat-input-row { padding:.75rem;border-top:1px solid var(--border);display:flex;gap:.5rem;align-items:center; }
+.chat-input { flex:1;padding:.55rem .85rem;border:1.5px solid var(--border);border-radius:999px;font-family:var(--ff-body);font-size:.88rem;outline:none;transition:border-color .2s; }
+.chat-input:focus { border-color:#4f46e5; }
+.chat-send { width:36px;height:36px;border-radius:50%;background:#4f46e5;border:none;color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+</style>
+
+<script src="/static/js/main.js"></script>
+</head>
+<body class="app-page admin-page">
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">C</div>
+      <div>
+        <div class="sb-brand-name">CivicConnect</div>
+        <small>Citizen Portal</small>
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/dashboard" class="sb-link active">
+        <span class="sb-icon">📊</span> <span>Dashboard</span>
+      </a>
+      <a href="/submit-complaint" class="sb-link">
+        <span class="sb-icon">➕</span> <span>Submit Complaint</span>
+      </a>
+      <a href="/my-complaints" class="sb-link">
+        <span class="sb-icon">📋</span> <span>My Complaints</span>
+      </a>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user" onclick="openProfile()" style="cursor:pointer;border-radius:10px;transition:background .2s;" onmouseenter="this.style.background='rgba(255,255,255,0.08)'" onmouseleave="this.style.background=''">
+        <div class="sb-avatar" id="userAvatar">—</div>
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sidebarName">Loading…</div>
+          <div class="sb-user-role">Citizen</div>
+        </div>
+      </div>
+      <button class="sb-logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="app-main dash-main">
+
+    <!-- Top bar -->
+    <div class="dash-topbar">
+      <div>
+        <h1 class="dash-greeting">Good day, <span id="userName">—</span> 👋</h1>
+        <p class="dash-sub">Here's a summary of your civic activity</p>
+      </div>
+      <a href="/submit-complaint" class="btn btn-primary">+ New Complaint</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="dash-stats">
+      <div class="dash-stat-card total">
+        <div class="dsc-icon">📋</div>
+        <div class="dsc-body">
+          <div class="dsc-num" id="s-total">0</div>
+          <div class="dsc-label">Total Submitted</div>
+        </div>
+      </div>
+      <div class="dash-stat-card pending">
+        <div class="dsc-icon">⏳</div>
+        <div class="dsc-body">
+          <div class="dsc-num" id="s-pending">0</div>
+          <div class="dsc-label">Pending</div>
+        </div>
+      </div>
+      <div class="dash-stat-card progress">
+        <div class="dsc-icon">🔧</div>
+        <div class="dsc-body">
+          <div class="dsc-num" id="s-progress">0</div>
+          <div class="dsc-label">In Progress</div>
+        </div>
+      </div>
+      <div class="dash-stat-card resolved">
+        <div class="dsc-icon">✅</div>
+        <div class="dsc-body">
+          <div class="dsc-num" id="s-resolved">0</div>
+          <div class="dsc-label">Resolved</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Complaints -->
+    <div class="dash-card">
+      <div class="dash-card-head">
+        <div class="dash-card-title">
+          <span class="dash-card-icon">📄</span>
+          <span>Recent Complaints</span>
+        </div>
+        <a href="/my-complaints" class="link">View all →</a>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Title</th><th>Category</th><th>Status</th><th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="recentBody">
+            <tr><td colspan="5" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="dash-card">
+      <div class="dash-card-head">
+        <div class="dash-card-title"><span class="dash-card-icon">⚡</span> <span>Quick Actions</span></div>
+      </div>
+      <div class="quick-actions">
+        <a href="/submit-complaint" class="qa-btn">
+          <div class="qa-icon" style="background:#eef2ff">📝</div>
+          <span>New Complaint</span>
+        </a>
+        <a href="/my-complaints" class="qa-btn">
+          <div class="qa-icon" style="background:#f0fdf4">📋</div>
+          <span>Track Status</span>
+        </a>
+        <a href="/my-complaints?filter=pending" class="qa-btn">
+          <div class="qa-icon" style="background:#fff7ed">⏳</div>
+          <span>Pending</span>
+        </a>
+        <a href="/my-complaints?filter=resolved" class="qa-btn">
+          <div class="qa-icon" style="background:#f0fdf4">✅</div>
+          <span>Resolved</span>
+        </a>
+      </div>
+    </div>
+
+  </main>
+</div>
+  <div class="profile-overlay" id="profileOverlay" onclick="closeProfile()"></div>
+  <div class="profile-drawer" id="profileDrawer">
+    <div class="pd-header">
+      <h3>My Profile</h3>
+      <button class="pd-close" onclick="closeProfile()">&#x2715;</button>
+    </div>
+    <div class="pd-avatar-section">
+      <div class="pd-avatar" id="pdAvatar">?</div>
+      <button class="pd-remove-avatar hidden" id="pdRemoveAvatar" onclick="removeAvatar()">✕ Remove photo</button>
+      <div class="pd-name" id="pdName">Loading...</div>
+      <div class="pd-role-badge" id="pdRole">Citizen</div>
+    </div>
+    <div class="pd-info">
+      <div class="pd-info-row">
+        <span class="pd-info-label">Email</span>
+        <span class="pd-info-val" id="pdEmail">—</span>
+      </div>
+      <div class="pd-info-row">
+        <span class="pd-info-label">Phone</span>
+        <span class="pd-info-val" id="pdPhone">—</span>
+      </div>
+      <div class="pd-info-row">
+        <span class="pd-info-label">Member Since</span>
+        <span class="pd-info-val" id="pdJoined">—</span>
+      </div>
+    </div>
+
+    <div class="pd-stats-title">Complaint Summary</div>
+    <div class="pd-stats">
+      <div class="pd-stat total"><div class="pd-stat-num" id="pdTotal">0</div><div class="pd-stat-label">Total</div></div>
+      <div class="pd-stat pending"><div class="pd-stat-num" id="pdPending">0</div><div class="pd-stat-label">Pending</div></div>
+      <div class="pd-stat progress"><div class="pd-stat-num" id="pdProgress">0</div><div class="pd-stat-label">In Progress</div></div>
+      <div class="pd-stat resolved"><div class="pd-stat-num" id="pdResolved">0</div><div class="pd-stat-label">Resolved</div></div>
+    </div>
+    <button class="pd-logout-btn" onclick="logout()">Sign Out</button>
+  </div>
+
+
+<script>
+
+async function openProfile() {
+  document.getElementById('profileOverlay').classList.add('active');
+  document.getElementById('profileDrawer').classList.add('active');
+  initAvatarUpload();
+  try {
+    const res = await fetch('/api/profile', {credentials:'include'});
+    const d = await res.json();
+    window._avatarFallbackLetter = d.name.charAt(0);
+    setAvatarDisplay(d.avatar_url, d.name.charAt(0));
+    document.getElementById('pdName').textContent = d.name;
+    document.getElementById('pdRole').textContent = d.role === 'admin' ? 'Administrator' : 'Citizen';
+    document.getElementById('pdEmail').textContent = d.email;
+    document.getElementById('pdPhone').textContent = d.phone || 'Not provided';
+    document.getElementById('pdJoined').textContent = d.joined;
+    document.getElementById('pdTotal').textContent = d.stats.total;
+    document.getElementById('pdPending').textContent = d.stats.pending;
+    document.getElementById('pdProgress').textContent = d.stats.in_progress;
+    document.getElementById('pdResolved').textContent = d.stats.resolved;
+  } catch(e) { console.error(e); }
+}
+function closeProfile() {
+  document.getElementById('profileOverlay').classList.remove('active');
+  document.getElementById('profileDrawer').classList.remove('active');
+}
+
+
+let chatOpen = false;
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById("chatWindow").classList.toggle("open", chatOpen);
+  if (chatOpen) document.getElementById("chatInput").focus();
+}
+async function sendChat() {
+  const input = document.getElementById("chatInput");
+  const msg = input.value.trim(); if (!msg) return;
+  input.value = "";
+  appendMsg(msg, "user");
+  const typingId = appendMsg("Thinking…", "typing");
+  try {
+    const res = await fetch("/api/ai", {
+      method:"POST", credentials:"include",
+      headers:{"Content-Type":"application/json", "X-CSRF-Token": getCsrfToken()},
+      body: JSON.stringify({ prompt: msg, system: "You are CivicAI, a helpful assistant for citizens on a civic grievance portal. Help people understand complaint statuses, how to write good reports, and answer questions about city services. Be friendly and concise, under 100 words." })
+    });
+    const data = await res.json();
+    removeMsg(typingId);
+    if (data.error) { appendMsg("⚠️ " + data.error, "bot"); }
+    else { appendMsg(data.text || "Sorry, I couldn't respond.", "bot"); }
+  } catch(e) { removeMsg(typingId); appendMsg("Connection error: " + e.message, "bot"); }
+}
+function appendMsg(text, type) {
+  const c = document.getElementById("chatMessages");
+  const id = "msg_" + Date.now() + Math.random();
+  const div = document.createElement("div");
+  div.className = "chat-msg " + type; div.id = id; div.textContent = text;
+  c.appendChild(div); c.scrollTop = c.scrollHeight; return id;
+}
+function removeMsg(id) { const el = document.getElementById(id); if(el) el.remove(); }
+
+async function init() {
+  const me = await (await fetch("/api/me", {credentials:"include"})).json();
+  if (!me.authenticated) { window.location.href="/login"; return; }
+  document.getElementById("userName").textContent = me.name;
+  document.getElementById("sidebarName").textContent = me.name;
+  window._avatarFallbackLetter = me.name.charAt(0);
+
+  // Load avatar for sidebar
+  try {
+    const profile = await (await fetch("/api/profile", {credentials:"include"})).json();
+    setAvatarDisplay(profile.avatar_url, me.name.charAt(0));
+  } catch {
+    document.getElementById("userAvatar").textContent = me.name.charAt(0).toUpperCase();
+  }
+
+  const complaintsResp = await (await fetch("/api/complaints/my?per_page=100", {credentials:"include"})).json();
+  const complaints = complaintsResp.data || [];
+  document.getElementById("s-total").textContent = complaintsResp.total ?? complaints.length;
+  document.getElementById("s-pending").textContent = complaints.filter(c=>c.status==="Pending").length;
+  document.getElementById("s-progress").textContent = complaints.filter(c=>c.status==="In Progress").length;
+  document.getElementById("s-resolved").textContent = complaints.filter(c=>c.status==="Resolved").length;
+
+  const tbody = document.getElementById("recentBody");
+  const recent = complaints.slice(0,5);
+  tbody.innerHTML = recent.length ? recent.map(c=>`
+    <tr>
+      <td><code>${c.complaint_id}</code></td>
+      <td>${c.title}</td>
+      <td><span class="badge cat">${c.category}</span></td>
+      <td><span class="badge status-${c.status.toLowerCase().replace(" ","-")}">${c.status}</span></td>
+      <td>${c.created_at}</td>
+    </tr>`).join("") : `<tr><td colspan="5" class="empty">No complaints yet. <a href="/submit-complaint">Submit one!</a></td></tr>`;
+}
+
+
+init();
+</script>
+
+<button class="chatbot-fab" onclick="toggleChat()" title="Ask CivicAI">🤖</button>
+<div class="chatbot-window" id="chatWindow">
+  <div class="chat-header">
+    <div class="chat-header-icon">🤖</div>
+    <div><div class="chat-title">CivicAI Assistant</div><div class="chat-sub">Ask me anything about civic issues</div></div>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg bot">Hi! I'm CivicAI 👋 I can help you track your complaints, understand statuses, or help you write better complaint descriptions. What do you need?</div>
+  </div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chatInput" placeholder="Ask a question…" onkeydown="if(event.key==='Enter') sendChat()">
+    <button class="chat-send" onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+</body>
+</html>

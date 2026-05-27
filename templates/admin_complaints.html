@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Complaints – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Detail Modal ─────────────────────────────────────── */
+.detail-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 1rem;
+}
+.detail-overlay.hidden { display: none; }
+
+.detail-modal {
+  background: #fff; border-radius: 16px; width: 100%; max-width: 780px;
+  max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 64px rgba(0,0,0,.22);
+  display: flex; flex-direction: column;
+}
+
+.detail-header {
+  padding: 1.4rem 1.8rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+  position: sticky; top: 0; background: #fff; z-index: 1; border-radius: 16px 16px 0 0;
+}
+.detail-header-left { flex: 1; }
+.detail-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.4rem; font-weight: 800;
+  color: #0f172a;
+  margin-bottom: .3rem;
+  line-height: 1.3;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+.detail-cid {
+  font-size: .78rem; color: #475569;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600; letter-spacing: .01em;
+}
+.detail-close {
+  background: none; border: none; font-size: 1.4rem; cursor: pointer;
+  color: #9ca3af; line-height: 1; padding: .2rem .5rem; border-radius: 6px;
+  transition: background .15s, color .15s;
+}
+.detail-close:hover { background: #f3f4f6; color: #111; }
+
+.detail-body { padding: 1.4rem 1.8rem; display: flex; flex-direction: column; gap: 1.4rem; }
+
+.detail-meta {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: .8rem;
+}
+.detail-meta-item {
+  background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: .7rem .9rem;
+}
+.detail-meta-item label {
+  display: block; font-size: .68rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: #64748b; margin-bottom: .3rem;
+  -webkit-font-smoothing: antialiased;
+}
+.detail-meta-item span {
+  font-size: .9rem; font-weight: 600; color: #0f172a;
+  display: block; word-break: break-word; overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+}
+
+.severity-section { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.1rem; }
+.severity-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #9ca3af; margin-bottom: .6rem; }
+.severity-bar-wrap { display: flex; align-items: center; gap: .9rem; }
+.severity-bar-bg { flex: 1; height: 10px; background: #e5e7eb; border-radius: 99px; overflow: hidden; }
+.severity-bar-fill { height: 100%; border-radius: 99px; transition: width .5s ease; }
+.severity-bar-fill.low    { background: #22c55e; }
+.severity-bar-fill.medium { background: #f59e0b; }
+.severity-bar-fill.high   { background: #ef4444; }
+.severity-text { font-size: .85rem; font-weight: 700; min-width: 110px; text-align: right; }
+.severity-text.low    { color: #16a34a; }
+.severity-text.medium { color: #d97706; }
+.severity-text.high   { color: #dc2626; }
+
+.detail-desc-box {
+  background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.1rem;
+}
+.detail-desc-box label { display: block; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: .5rem; -webkit-font-smoothing: antialiased; }
+.detail-desc-box p { font-size: .92rem; color: #1e293b; line-height: 1.7; margin: 0; font-weight: 500; -webkit-font-smoothing: antialiased; }
+
+.detail-images-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: .7rem; -webkit-font-smoothing: antialiased; }
+.detail-images-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: .75rem; }
+.detail-img-thumb {
+  aspect-ratio: 4/3; border-radius: 10px; overflow: hidden; cursor: pointer;
+  border: 2px solid #e5e7eb; transition: border-color .2s, transform .18s; position: relative;
+}
+.detail-img-thumb:hover { border-color: #4f46e5; transform: scale(1.025); }
+.detail-img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.img-overlay {
+  position: absolute; inset: 0; background: rgba(79,70,229,0);
+  display: flex; align-items: center; justify-content: center; transition: background .2s;
+}
+.detail-img-thumb:hover .img-overlay { background: rgba(79,70,229,.2); }
+.img-overlay span { font-size: 1.6rem; opacity: 0; transition: opacity .2s; }
+.detail-img-thumb:hover .img-overlay span { opacity: 1; }
+.no-images { color: #9ca3af; font-size: .88rem; font-style: italic; padding: .4rem 0; }
+
+/* Lightbox */
+.lightbox-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.9);
+  display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1rem;
+}
+.lightbox-overlay.hidden { display: none; }
+.lightbox-img { max-width: 90vw; max-height: 85vh; border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
+.lightbox-close {
+  position: fixed; top: 1.2rem; right: 1.4rem;
+  background: rgba(255,255,255,.15); border: none; color: #fff; font-size: 1.5rem;
+  cursor: pointer; border-radius: 50%; width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+}
+.lightbox-nav {
+  position: fixed; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,.15); border: none; color: #fff; font-size: 2rem;
+  cursor: pointer; border-radius: 50%; width: 50px; height: 50px;
+  display: flex; align-items: center; justify-content: center; transition: background .2s;
+}
+.lightbox-nav:hover { background: rgba(255,255,255,.3); }
+.lightbox-nav.prev { left: 1.2rem; }
+.lightbox-nav.next { right: 1.2rem; }
+.lightbox-counter {
+  position: fixed; bottom: 1.4rem; left: 50%; transform: translateX(-50%);
+  color: #fff; font-size: .85rem; background: rgba(0,0,0,.45); padding: .3rem 1rem; border-radius: 99px;
+}
+
+.detail-footer {
+  padding: 1.1rem 1.8rem; border-top: 1px solid #e5e7eb;
+  display: flex; gap: .8rem; justify-content: flex-end; align-items: center; flex-wrap: wrap;
+}
+.detail-footer select {
+  padding: .45rem .8rem; border-radius: 8px; border: 1px solid #d1d5db; font-size: .85rem; font-family: inherit;
+}
+.btn-view { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; }
+.btn-view:hover { background: #e0e7ff; }
+.btn-actions { display: flex; gap: .35rem; align-items: center; flex-wrap: nowrap; }
+.btn-actions .btn { white-space: nowrap; padding: .35rem .65rem; font-size: .78rem; }
+.data-table td:last-child { overflow: visible; white-space: nowrap; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/js/main.js"></script>
+</head>
+<body class="app-page admin-page">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">⚙</div>
+      <div class="sb-brand-name">CivicConnect<small>Admin Panel</small></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/dashboard" class="sb-link">📊 Dashboard</a>
+      <a href="/admin/complaints" class="sb-link active">📋 All Complaints</a>
+      <a href="/admin/departments" class="sb-link"><span class="sb-icon">🏛️</span> Departments</a>
+      <a href="/admin/analytics" class="sb-link">📈 Analytics</a>
+    </nav>
+    <div class="sb-footer">
+      <button class="sb-logout-btn" onclick="logout()">🚪 Logout</button>
+    </div>
+  </aside>
+  <main class="app-main" style="flex:1;width:100%;max-width:none;padding:2rem 2.5rem;box-sizing:border-box;overflow-x:hidden;background:#f4f6fb;">
+    <div class="page-header">
+      <div><h1 id="pg-title">All Complaints</h1><p class="page-sub" id="pg-sub">View full details, evidence images, and manage complaint status</p></div>
+      <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;">
+        <a href="/api/admin/export/excel" class="btn btn-outline btn-sm" style="color:#1d4ed8;border-color:#93c5fd;" download>⬇ Excel</a>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <select id="fStatus" onchange="load(1)"><option value="">All Status</option><option>Pending</option><option>In Progress</option><option>Resolved</option></select>
+      <select id="fPriority" onchange="load(1)"><option value="">All Priority</option><option>Low</option><option>Medium</option><option>High</option></select>
+      <select id="fCategory" onchange="load(1)">
+        <option value="">All Departments</option>
+        <option>Unassigned</option>
+        <option>Public Works</option><option>Water &amp; Sanitation</option><option>Electricity</option>
+        <option>Roads &amp; Transport</option><option>Parks &amp; Recreation</option>
+        <option>Health &amp; Hygiene</option><option>Municipal Administration</option>
+      </select>
+    </div>
+    <div class="section-card">
+      <div class="table-wrap">
+        <table class="data-table">
+          <colgroup>
+            <col style="width:120px">
+            <col style="width:160px">
+            <col style="width:140px">
+            <col style="width:145px">
+            <col style="width:140px">
+            <col style="width:85px">
+            <col style="width:115px">
+            <col style="width:145px">
+          </colgroup>
+          <thead>
+            <tr><th>ID</th><th>Citizen</th><th>Title</th><th>Department</th><th>Location</th>
+            <th>Priority</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="tbody"><tr><td colspan="8" class="loading">Loading…</td></tr></tbody>
+        </table>
+        <div id="pagination" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-top:1px solid var(--border);font-size:.83rem;color:var(--muted2);">
+          <span id="pg-info"></span>
+          <div style="display:flex;gap:.5rem;">
+            <button id="pg-prev" class="btn btn-sm btn-outline" onclick="changePage(-1)" disabled>← Prev</button>
+            <button id="pg-next" class="btn btn-sm btn-outline" onclick="changePage(1)"  disabled>Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ── Detail Modal ── -->
+<div class="detail-overlay hidden" id="detailModal">
+  <div class="detail-modal">
+    <div class="detail-header">
+      <div class="detail-header-left">
+        <div class="detail-title" id="d-title">—</div>
+        <div class="detail-cid" id="d-cid">—</div>
+      </div>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="detail-meta">
+        <div class="detail-meta-item"><label>Submitted By</label><span id="d-name">—</span></div>
+        <div class="detail-meta-item"><label>Email</label><span id="d-email" style="word-break:break-all;font-size:.82rem;">—</span></div>
+        <div class="detail-meta-item"><label>Category</label><span id="d-category">—</span></div>
+        <div class="detail-meta-item" style="grid-column: span 2;"><label>Location</label><span id="d-location">—</span></div>
+        <div class="detail-meta-item"><label>Submitted On</label><span id="d-date">—</span></div>
+        <div class="detail-meta-item"><label>Department</label><span id="d-dept">—</span></div>
+        <div class="detail-meta-item"><label>Current Status</label><span id="d-status">—</span></div>
+      </div>
+      <div class="severity-section">
+        <div class="severity-label">Priority / Severity Assessment</div>
+        <div class="severity-bar-wrap">
+          <div class="severity-bar-bg">
+            <div class="severity-bar-fill" id="d-severity-bar" style="width:0%"></div>
+          </div>
+          <span class="severity-text" id="d-severity-text">—</span>
+        </div>
+      </div>
+      <div class="detail-desc-box">
+        <label>Full Description</label>
+        <p id="d-description">—</p>
+      </div>
+      <div>
+        <div class="detail-images-label" id="d-images-label">Evidence / Uploaded Images</div>
+        <div id="d-images-grid" class="detail-images-grid"></div>
+      </div>
+
+      <!-- ── Activity Log ── -->
+      <div>
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:.6rem;">Department Update History</div>
+        <div id="d-activity-log" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:.9rem 1.1rem;max-height:200px;overflow-y:auto;">
+          <div style="color:#9ca3af;font-size:.85rem;font-style:italic;">No updates yet.</div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-footer">
+      <select id="d-m-status"><option>Pending</option><option>In Progress</option><option>Resolved</option></select>
+      <select id="d-m-priority"><option>Low</option><option>Medium</option><option>High</option></select>
+      <select id="d-m-dept">
+        <option>Unassigned</option><option>Public Works</option><option>Water & Sanitation</option>
+        <option>Electricity</option><option>Roads & Transport</option><option>Parks & Recreation</option>
+        <option>Health & Hygiene</option><option>Municipal Administration</option>
+      </select>
+      <button class="btn btn-primary" onclick="saveFromDetail()">Save Changes</button>
+    </div>
+    <div id="d-msg" class="msg hidden" style="margin:0 1.8rem .9rem;"></div>
+  </div>
+</div>
+
+<!-- ── Quick-edit Modal ── -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <h3>Update Complaint</h3>
+    <p id="modal-id" class="modal-cid"></p>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="m-status"><option>Pending</option><option>In Progress</option><option>Resolved</option></select>
+    </div>
+    <div class="form-group">
+      <label>Priority</label>
+      <select id="m-priority"><option>Low</option><option>Medium</option><option>High</option></select>
+    </div>
+    <div class="form-group">
+      <label>Department</label>
+      <select id="m-dept">
+        <option>Unassigned</option><option>Public Works</option><option>Water & Sanitation</option>
+        <option>Electricity</option><option>Roads & Transport</option><option>Parks & Recreation</option>
+        <option>Health & Hygiene</option><option>Municipal Administration</option>
+      </select>
+    </div>
+    <div id="modal-msg" class="msg hidden"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUpdate()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Invite Code Modal ── -->
+<div class="modal-overlay hidden" id="inviteModal">
+  <div class="modal" style="max-width:400px;">
+    <h3>🔑 Department Invite Code</h3>
+    <p style="color:#64748b;font-size:.85rem;margin-bottom:1rem;">Share this code with department staff so they can self-register at <strong>/dept/register</strong></p>
+    <div style="background:#f5f3ff;border:2px dashed #a78bfa;border-radius:10px;padding:1.2rem;text-align:center;margin-bottom:1rem;">
+      <span id="inviteCodeDisplay" style="font-size:1.4rem;font-weight:800;letter-spacing:.15em;color:#7c3aed;">—</span>
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-bottom:.5rem;" onclick="copyInviteCode()">📋 Copy Code</button>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="btn btn-outline" onclick="document.getElementById('inviteModal').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Lightbox ── -->
+<div class="lightbox-overlay hidden" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-nav prev" id="lb-prev" onclick="lbNav(-1)">&#8249;</button>
+  <img class="lightbox-img" id="lb-img" src="" alt="Evidence photo">
+  <button class="lightbox-nav next" id="lb-next" onclick="lbNav(1)">&#8250;</button>
+  <div class="lightbox-counter" id="lb-counter"></div>
+</div>
+
+<script>
+let currentId = null;
+let detailCurrentId = null;
+let lbImages = [];
+let lbIndex = 0;
+
+// Cache complaints by _id to avoid & and quote escaping bugs in onclick attrs
+let complaintsCache = {};
+function openDetailById(id) { openDetail(complaintsCache[id]); }
+function openModalById(id) {
+  const c = complaintsCache[id];
+  openModal(c._id, c.complaint_id, c.status, c.priority, c.department);
+}
+
+let currentPage = 1;
+
+async function load(page) {
+  if (page !== undefined) currentPage = page;
+  const params = new URLSearchParams();
+  const s = document.getElementById("fStatus").value;
+  const p = document.getElementById("fPriority").value;
+  const c = document.getElementById("fCategory").value;
+  if (s) params.set("status", s);
+  if (p) params.set("priority", p);
+  if (c) params.set("department", c);
+  params.set("page", currentPage);
+  params.set("per_page", 25);
+  const res  = await fetch(`/api/admin/complaints?${params}`, {credentials:"include"});
+  const json = await res.json();
+  const data = json.data || [];
+  complaintsCache = {}; data.forEach(c => { complaintsCache[c._id] = c; });
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = data.length ? data.map(c => `
+    <tr>
+      <td><code>${c.complaint_id}</code></td>
+      <td>${c.user_name}<br><small>${c.user_email}</small></td>
+      <td>${c.title}</td>
+      <td><span class="badge" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-size:.72rem;">${c.department||'Unassigned'}</span></td>
+      <td title="${c.location}">${c.location.length>22 ? c.location.substring(0,22)+"…" : c.location}</td>
+      <td><span class="badge pri-${c.priority.toLowerCase()}">${c.priority}</span></td>
+      <td><span class="badge status-${c.status.toLowerCase().replace(" ","-")}">${c.status}</span></td>
+      <td>
+        <div class="btn-actions">
+          <button class="btn btn-sm btn-view"    data-id="${c._id}" onclick="openDetailById(this.dataset.id)">🔍 View</button>
+          <button class="btn btn-sm btn-outline" data-id="${c._id}" onclick="openModalById(this.dataset.id)">Edit</button>
+        </div>
+      </td>
+    </tr>`).join("") : `<tr><td colspan="8" class="empty">No complaints found.</td></tr>`;
+
+  // Update pagination controls
+  const total = json.total || 0;
+  const pages = json.pages || 1;
+  const start = total === 0 ? 0 : (currentPage - 1) * 25 + 1;
+  const end   = Math.min(currentPage * 25, total);
+  document.getElementById("pg-info").textContent = total ? `Showing ${start}–${end} of ${total}` : "No results";
+  document.getElementById("pg-prev").disabled = currentPage <= 1;
+  document.getElementById("pg-next").disabled = currentPage >= pages;
+}
+
+function changePage(dir) {
+  load(currentPage + dir);
+}
+
+function severityConfig(priority) {
+  if (priority === "High")   return { pct: 92, cls: "high",   label: "🔴 High Severity" };
+  if (priority === "Medium") return { pct: 52, cls: "medium", label: "🟡 Medium Severity" };
+  return                            { pct: 18, cls: "low",    label: "🟢 Low Severity" };
+}
+
+function openDetail(c) {
+  detailCurrentId = c.complaint_id;
+  document.getElementById("d-title").textContent    = c.title;
+  document.getElementById("d-cid").textContent      = c.complaint_id + " · " + c.created_at;
+  document.getElementById("d-name").textContent     = c.user_name;
+  document.getElementById("d-email").textContent    = c.user_email;
+  document.getElementById("d-category").textContent = c.category;
+
+  // Location — clickable map button
+  const locEl = document.getElementById("d-location");
+  const hasCoords = c.lat && c.lng;
+  if (hasCoords) {
+    locEl.innerHTML = `<span style="font-weight:600">${c.location||"—"}</span> <button onclick="openMapModal(${c.lat},${c.lng},'${(c.location||'').replace(/'/g,"\'")}')" style="display:inline-flex;align-items:center;gap:.25rem;margin-left:.5rem;padding:.2rem .55rem;border-radius:6px;border:1.5px solid #c7d2fe;background:#eef2ff;color:#4f46e5;font-size:.75rem;font-weight:700;cursor:pointer;">🗺️ View Map</button>`;
+  } else {
+    locEl.textContent = c.location || "—";
+  }
+  document.getElementById("d-date").textContent     = c.created_at || "—";
+  document.getElementById("d-dept").textContent     = c.department;
+  document.getElementById("d-status").innerHTML     = `<span class="badge status-${c.status.toLowerCase().replace(" ","-")}">${c.status}</span>`;
+
+  const sv  = severityConfig(c.priority);
+  const bar = document.getElementById("d-severity-bar");
+  bar.style.width = "0%";
+  bar.className   = `severity-bar-fill ${sv.cls}`;
+  setTimeout(() => bar.style.width = sv.pct + "%", 60);
+  const txt = document.getElementById("d-severity-text");
+  txt.textContent = sv.label;
+  txt.className   = `severity-text ${sv.cls}`;
+
+  document.getElementById("d-description").textContent = c.description || "No description provided.";
+
+  const grid  = document.getElementById("d-images-grid");
+  const label = document.getElementById("d-images-label");
+  const imgs  = (c.images || []).map(url => {
+    // Ensure URL starts with / so it resolves from root
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    if (!url.startsWith("/")) return "/" + url;
+    return url;
+  }).filter(Boolean);
+  lbImages = imgs;
+
+  if (imgs.length === 0) {
+    label.textContent = "Evidence / Uploaded Images";
+    grid.innerHTML    = `<div class="no-images">📷 No images were uploaded for this complaint.</div>`;
+  } else {
+    label.textContent = `Evidence / Uploaded Images (${imgs.length} photo${imgs.length > 1 ? "s" : ""})`;
+    grid.innerHTML    = imgs.map((url, i) => `
+      <div class="detail-img-thumb" onclick="openLightbox(${i})">
+        <img src="${url}" alt="Evidence ${i+1}" loading="lazy">
+        <div class="img-overlay"><span>🔎</span></div>
+      </div>`).join("");
+  }
+
+  document.getElementById("d-m-status").value   = c.status;
+  document.getElementById("d-m-priority").value = c.priority;
+  document.getElementById("d-m-dept").value     = c.department;
+  document.getElementById("d-msg").className    = "msg hidden";
+
+  // Load activity log
+  loadActivityLog(c._id);
+
+  document.getElementById("detailModal").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+async function loadActivityLog(mongoId) {
+  const log = document.getElementById("d-activity-log");
+  log.innerHTML = `<div style="color:#9ca3af;font-size:.85rem;font-style:italic;">Loading…</div>`;
+  try {
+    const res  = await fetch(`/api/activity?complaint_id=${mongoId}`, {credentials:"include"});
+    const data = await res.json();
+    if (!data.length) { log.innerHTML = `<div style="color:#9ca3af;font-size:.85rem;font-style:italic;">No department updates yet.</div>`; return; }
+    const icons = {"Pending":"⏳","In Progress":"🔧","Resolved":"✅"};
+    const colors = {"Pending":"#d97706","In Progress":"#2563eb","Resolved":"#059669"};
+    log.innerHTML = data.map(a => `
+      <div style="display:flex;gap:.7rem;padding:.5rem 0;border-bottom:1px solid #f1f5f9;">
+        <div style="font-size:1rem;min-width:20px;">${icons[a.new_status]||'📋'}</div>
+        <div style="flex:1;">
+          <div style="font-size:.82rem;font-weight:600;color:#0f172a;">
+            <span style="color:#94a3b8;">${a.old_status}</span>
+            <span style="color:#cbd5e1;margin:0 .3rem;">→</span>
+            <strong style="color:${colors[a.new_status]||'#4f46e5'}">${a.new_status}</strong>
+          </div>
+          <div style="font-size:.72rem;color:#94a3b8;margin-top:.1rem;">By <strong>${a.updated_by}</strong> (${a.department}) · ${a.timestamp}</div>
+          ${a.comment ? `<div style="font-size:.78rem;color:#475569;margin-top:.3rem;background:#f8fafc;border-radius:6px;padding:.3rem .6rem;border-left:3px solid #cbd5e1;">💬 ${a.comment}</div>` : ""}
+        </div>
+      </div>`).join("");
+  } catch(e) { log.innerHTML = `<div style="color:#ef4444;font-size:.82rem;">Failed to load history.</div>`; }
+}
+
+function closeDetail() {
+  document.getElementById("detailModal").classList.add("hidden");
+  document.body.style.overflow = "";
+}
+
+async function saveFromDetail() {
+  const msg  = document.getElementById("d-msg");
+  const body = {
+    status:     document.getElementById("d-m-status").value,
+    priority:   document.getElementById("d-m-priority").value,
+    department: document.getElementById("d-m-dept").value
+  };
+  const res  = await fetch(`/api/admin/complaints/${detailCurrentId}`, {
+    method:"PATCH", credentials:"include",
+    headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()}, body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (res.ok) {
+    msg.textContent = "✅ Complaint updated successfully!";
+    msg.className   = "msg success";
+    load();
+    setTimeout(() => { msg.className = "msg hidden"; }, 2500);
+  } else {
+    msg.textContent = data.error;
+    msg.className   = "msg error";
+  }
+}
+
+function openLightbox(index) {
+  lbIndex = index;
+  document.getElementById("lb-img").src         = lbImages[lbIndex];
+  document.getElementById("lb-counter").textContent = `${lbIndex+1} / ${lbImages.length}`;
+  document.getElementById("lb-prev").style.display  = lbImages.length > 1 ? "flex" : "none";
+  document.getElementById("lb-next").style.display  = lbImages.length > 1 ? "flex" : "none";
+  document.getElementById("lightbox").classList.remove("hidden");
+}
+function closeLightbox() { document.getElementById("lightbox").classList.add("hidden"); }
+function lbNav(dir) {
+  lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
+  document.getElementById("lb-img").src             = lbImages[lbIndex];
+  document.getElementById("lb-counter").textContent = `${lbIndex+1} / ${lbImages.length}`;
+}
+
+document.getElementById("lightbox").addEventListener("click", function(e) { if(e.target===this) closeLightbox(); });
+document.getElementById("detailModal").addEventListener("click", function(e) { if(e.target===this) closeDetail(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape")      { closeLightbox(); closeDetail(); }
+  if (e.key === "ArrowRight" && lbImages.length) lbNav(1);
+  if (e.key === "ArrowLeft"  && lbImages.length) lbNav(-1);
+});
+
+function openModal(id, cid, status, priority, dept) {
+  currentId = cid;
+  document.getElementById("modal-id").textContent    = cid;
+  document.getElementById("m-status").value          = status;
+  document.getElementById("m-priority").value        = priority;
+  document.getElementById("m-dept").value            = dept;
+  document.getElementById("modal-msg").className     = "msg hidden";
+  document.getElementById("modal").classList.remove("hidden");
+}
+function closeModal() { document.getElementById("modal").classList.add("hidden"); }
+async function saveUpdate() {
+  const msg  = document.getElementById("modal-msg");
+  const body = {
+    status:     document.getElementById("m-status").value,
+    priority:   document.getElementById("m-priority").value,
+    department: document.getElementById("m-dept").value
+  };
+  const res  = await fetch(`/api/admin/complaints/${currentId}`, {
+    method:"PATCH", credentials:"include",
+    headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()}, body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (res.ok) { msg.textContent = "✅ Updated!"; msg.className = "msg success"; load(); setTimeout(closeModal, 1000); }
+  else        { msg.textContent = data.error;    msg.className = "msg error"; }
+}
+
+
+
+
+async function showInviteCode() {
+  const res  = await fetch("/api/admin/invite-code", {credentials:"include"});
+  const data = await res.json();
+  document.getElementById("inviteCodeDisplay").textContent = data.code;
+  document.getElementById("inviteModal").classList.remove("hidden");
+}
+function copyInviteCode() {
+  const code = document.getElementById("inviteCodeDisplay").textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = event.target;
+    btn.textContent = "✅ Copied!";
+    setTimeout(() => btn.textContent = "📋 Copy Code", 1800);
+  });
+}
+document.getElementById("inviteModal").addEventListener("click", function(e) { if(e.target===this) this.classList.add("hidden"); });
+
+fetch("/api/me",{credentials:"include"}).then(r=>r.json()).then(d=>{
+  if(!d.authenticated||d.role!=="admin") window.location.href="/login"; else load();
+});
+</script>
+
+<!-- ── Location Map Modal ── -->
+<div class="detail-overlay hidden" id="mapModal" style="z-index:1100;">
+  <div class="detail-modal" style="max-width:640px;">
+    <div class="detail-header">
+      <div>
+        <div class="detail-title" style="font-size:1rem;">📍 Complaint Location</div>
+        <div class="detail-cid" id="mapModalAddr">—</div>
+      </div>
+      <button class="detail-close" onclick="closeMapModal()">✕</button>
+    </div>
+    <div style="height:360px;width:100%;" id="modalMapContainer"></div>
+    <div style="padding:.75rem 1.5rem;display:flex;justify-content:flex-end;gap:.5rem;border-top:1px solid #e5e7eb;">
+      <a id="mapModalGoogleLink" href="#" target="_blank" class="btn btn-primary" style="font-size:.82rem;padding:.4rem 1rem;">Open in Google Maps ↗</a>
+      <button class="btn btn-outline" onclick="closeMapModal()">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+let _modalMap = null;
+function openMapModal(lat, lng, addr) {
+  document.getElementById('mapModalAddr').textContent = addr;
+  document.getElementById('mapModalGoogleLink').href = `https://maps.google.com/?q=${lat},${lng}`;
+  document.getElementById('mapModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => {
+    if (_modalMap) { _modalMap.remove(); _modalMap = null; }
+    _modalMap = L.map('modalMapContainer').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap',maxZoom:19}).addTo(_modalMap);
+    L.marker([lat, lng]).addTo(_modalMap).bindPopup(addr).openPopup();
+  }, 80);
+}
+function closeMapModal() {
+  document.getElementById('mapModal').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (_modalMap) { _modalMap.remove(); _modalMap = null; }
+}
+document.getElementById('mapModal').addEventListener('click', function(e){ if(e.target===this) closeMapModal(); });
+</script>
+
+</body>
+</html>

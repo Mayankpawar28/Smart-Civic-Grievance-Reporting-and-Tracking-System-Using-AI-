@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Civic Grievance System</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="landing-page">
+
+<nav class="top-nav">
+  <div class="nav-brand">✳️ CivicConnect</div>
+  <div class="nav-links">
+    <a href="/login" class="btn btn-ghost">Login</a>
+    <a href="/register" class="btn btn-primary">Register</a>
+  </div>
+</nav>
+
+<main class="landing-main">
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">🏙️ Smart City Platform</div>
+      <h1 class="hero-title">Your Voice.<br>Your City.<br><span class="accent">Your Rights.</span></h1>
+      <p class="hero-sub">Submit, track, and resolve civic complaints with transparency and efficiency. Built for citizens, powered by accountability.</p>
+      <div class="hero-cta">
+        <a href="/register" class="btn btn-primary btn-lg">Submit a Complaint</a>
+        <a href="/login" class="btn btn-outline btn-lg">Track My Complaint</a>
+      </div>
+
+      <!-- Stats cards -->
+      <div class="landing-stats">
+        <div class="landing-stat-card">
+          <div class="lsc-label">Total Submitted</div>
+          <div class="lsc-num" id="stat-total">1,000</div>
+          <div class="lsc-sub">Reports Received</div>
+        </div>
+        <div class="landing-stat-card">
+          <div class="lsc-label">In Progress</div>
+          <div class="lsc-num" id="stat-progress" style="color:#2563eb;">0</div>
+          <div class="lsc-sub">Being Worked On</div>
+        </div>
+        <div class="landing-stat-card">
+          <div class="lsc-label">Resolved</div>
+          <div class="lsc-num" id="stat-resolved">263</div>
+          <div class="lsc-sub">Cases Solved</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <!-- Recent Activity Card -->
+      <div class="city-card">
+        <div class="cc-header">Recent Activity</div>
+        <div class="cc-item pending">🚧 Pothole on MG Road <span>Pending</span></div>
+        <div class="cc-item progress">💡 Street Light Out <span>In Progress</span></div>
+        <div class="cc-item resolved">🗑️ Garbage Overflow <span>Resolved</span></div>
+        <div class="cc-item pending">🚰 Water Supply Issue <span>Pending</span></div>
+      </div>
+
+      <!-- Category Grid -->
+      <div class="category-grid">
+        <div class="cat-item road">🛣️<span>Road</span></div>
+        <div class="cat-item light">💡<span>Light</span></div>
+        <div class="cat-item waste">🗑️<span>Waste</span></div>
+        <div class="cat-item water">💧<span>Water</span></div>
+        <div class="cat-item park">🌳<span>Park</span></div>
+        <div class="cat-item building">🏢<span>Building</span></div>
+        <div class="cat-item transport">🚌<span>Transport</span></div>
+        <div class="cat-item utility">🔌<span>Utility</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works">
+    <h2 class="hiw-title">How It Works</h2>
+    <div class="hiw-steps">
+      <div class="hiw-step">
+        <div class="hiw-icon report">📄</div>
+        <div class="hiw-text">
+          <div class="hiw-step-title">1. Report</div>
+          <div class="hiw-step-desc">Easily submit your complaint</div>
+        </div>
+      </div>
+      <div class="hiw-step">
+        <div class="hiw-icon track">🔍</div>
+        <div class="hiw-text">
+          <div class="hiw-step-title">2. Track</div>
+          <div class="hiw-step-desc">Monitor the progress of your report</div>
+        </div>
+      </div>
+      <div class="hiw-step">
+        <div class="hiw-icon resolve">✅</div>
+        <div class="hiw-text">
+          <div class="hiw-step-title">3. Resolve</div>
+          <div class="hiw-step-desc">Receive updates as issues are resolved</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+function animateCount(el, target, duration = 1200) {
+  const start = performance.now();
+  const from = 0;
+  function update(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(from + (target - from) * ease).toLocaleString();
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+fetch("/api/public/stats")
+  .then(r => r.json())
+  .then(d => {
+    if (d.total !== undefined) {
+      animateCount(document.getElementById("stat-total"), d.total);
+      animateCount(document.getElementById("stat-resolved"), d.resolved, 1500);
+      // also update in-progress if element exists
+      const ip = document.getElementById("stat-progress");
+      if (ip && d.in_progress !== undefined) animateCount(ip, d.in_progress, 1300);
+    }
+  })
+  .catch(() => {
+    // fallback: keep placeholder values already in DOM
+  });
+</script>
+</body>
+</html>

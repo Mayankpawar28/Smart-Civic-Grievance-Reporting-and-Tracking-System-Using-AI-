@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Departments – CivicConnect Admin</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Department cards grid ── */
+.dept-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .85rem;
+  margin-top: 1.2rem;
+}
+.dept-card {
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,.04);
+  transition: box-shadow .2s, border-color .2s;
+  min-width: 0;
+}
+.dept-card:hover { box-shadow: 0 5px 16px rgba(0,0,0,.09); border-color: #c7d2fe; }
+.dept-card-header {
+  display: flex; align-items: center; gap: .6rem;
+  margin-bottom: .85rem; flex-wrap: nowrap;
+}
+.dept-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; flex-shrink: 0;
+}
+.dept-name {
+  font-family: 'Playfair Display', serif;
+  font-size: .88rem; font-weight: 800; color: #0f172a;
+  flex: 1; min-width: 0; line-height: 1.3;
+}
+.dept-resolved-badge {
+  font-size: .68rem; font-weight: 700; padding: .2rem .55rem;
+  border-radius: 999px; background: #ecfdf5; color: #059669;
+  border: 1px solid #a7f3d0; white-space: nowrap; flex-shrink: 0;
+}
+.dept-stats-row {
+  display: flex; gap: .4rem; margin-bottom: .85rem;
+}
+.dept-stat {
+  flex: 1; background: #f8fafc; border: 1px solid #e5e7eb;
+  border-radius: 7px; padding: .4rem .3rem; text-align: center;
+}
+.dept-stat-num { font-size: 1rem; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: .12rem; }
+.dept-stat-label { font-size: .58rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.dept-stat.pending  .dept-stat-num { color: #d97706; }
+.dept-stat.progress .dept-stat-num { color: #2563eb; }
+.dept-stat.resolved .dept-stat-num { color: #059669; }
+
+/* Credentials reveal */
+.dept-cred-row {
+  display: flex; align-items: center; gap: .5rem;
+  background: #f8fafc; border: 1px solid #e5e7eb;
+  border-radius: 7px; padding: .42rem .65rem;
+  margin-bottom: .4rem; font-size: .78rem;
+}
+.dept-cred-label {
+  font-size: .62rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: #64748b; min-width: 46px;
+}
+.dept-cred-val {
+  flex: 1; font-family: monospace; font-size: .76rem;
+  color: #0f172a; font-weight: 600; word-break: break-all; min-width: 0;
+}
+.dept-pw-val {
+  flex: 1; font-family: monospace; font-size: .76rem;
+  color: #0f172a; font-weight: 600;
+  filter: blur(4px); cursor: pointer; transition: filter .2s;
+  user-select: none; min-width: 0;
+}
+.dept-pw-val.revealed { filter: none; user-select: text; }
+.dept-pw-toggle {
+  background: none; border: none; cursor: pointer;
+  font-size: .72rem; color: #6366f1; font-weight: 700;
+  padding: .1rem .25rem; white-space: nowrap;
+}
+.dept-card-footer {
+  display: flex; gap: .45rem; margin-top: .75rem; padding-top: .75rem;
+  border-top: 1px solid #f1f5f9;
+}
+.btn-portal {
+  flex: 1; padding: .42rem .5rem; background: #ecfdf5;
+  color: #059669; border: 1.5px solid #a7f3d0;
+  border-radius: 7px; font-size: .75rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; text-align: center;
+  text-decoration: none; display: inline-block; transition: background .2s;
+}
+.btn-portal:hover { background: #d1fae5; }
+.btn-copy {
+  padding: .42rem .5rem; background: #f5f3ff;
+  color: #7c3aed; border: 1.5px solid #ddd6fe;
+  border-radius: 7px; font-size: .75rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: background .2s; white-space: nowrap;
+}
+.btn-copy:hover { background: #ede9fe; }
+
+/* Resolution bar */
+.res-mini-bar {
+  background: #e5e7eb; border-radius: 999px; height: 4px;
+  overflow: hidden; margin-top: .5rem;
+}
+.res-mini-fill {
+  height: 100%; background: linear-gradient(90deg, #059669, #10b981);
+  border-radius: 999px; transition: width .6s ease;
+}
+.res-mini-label {
+  display: flex; justify-content: space-between;
+  font-size: .64rem; color: #94a3b8; margin-top: .25rem;
+}
+
+/* Summary bar at top */
+.dept-summary {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: .9rem;
+  margin-bottom: 1.4rem;
+}
+.dept-sum-card {
+  background: #fff; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  padding: .9rem 1rem; display: flex; align-items: center; gap: .8rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.dept-sum-icon { font-size: 1.4rem; }
+.dept-sum-num  { font-size: 1.4rem; font-weight: 800; color: #0f172a; line-height: 1; }
+.dept-sum-lbl  { font-size: .72rem; color: #64748b; font-weight: 600; margin-top: .1rem; }
+
+@media(max-width:1200px) { .dept-grid { grid-template-columns: repeat(3, 1fr); } }
+@media(max-width:900px)  { .dept-grid { grid-template-columns: repeat(2, 1fr); } .dept-summary { grid-template-columns: 1fr 1fr; } }
+@media(max-width:550px)  { .dept-grid { grid-template-columns: 1fr; } }
+/* Create dept modal */
+.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center; }
+.modal-overlay.hidden { display:none; }
+.modal-box { background:#fff;border-radius:16px;padding:2rem;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.2); }
+.modal-box h2 { font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:800;margin-bottom:1.2rem;color:#0f172a; }
+.modal-field { margin-bottom:1rem; }
+.modal-field label { display:block;font-size:.78rem;font-weight:700;color:#374151;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em; }
+.modal-field input,.modal-field select { width:100%;padding:.55rem .75rem;border:1.5px solid #e5e7eb;border-radius:8px;font-family:inherit;font-size:.9rem;box-sizing:border-box;outline:none;transition:border-color .2s; }
+.modal-field input:focus,.modal-field select:focus { border-color:#6366f1; }
+.modal-actions { display:flex;gap:.65rem;margin-top:1.4rem; }
+.modal-actions .btn-cancel { flex:1;padding:.6rem;background:#f1f5f9;color:#64748b;border:1.5px solid #e5e7eb;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:.875rem; }
+.modal-actions .btn-create { flex:2;padding:.6rem;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:.875rem; }
+.modal-actions .btn-create:disabled { opacity:.6;cursor:not-allowed; }
+.modal-msg { font-size:.8rem;padding:.5rem .75rem;border-radius:7px;margin-top:.75rem; }
+.modal-msg.error   { background:#fef2f2;color:#dc2626;border:1px solid #fecaca; }
+.modal-msg.success { background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0; }
+</style>
+<script src="/static/js/main.js"></script>
+</head>
+<body class="app-page admin-page">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">⚙</div>
+      <div class="sb-brand-name">CivicConnect<small>Admin Panel</small></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/dashboard"         class="sb-link"><span class="sb-icon">📊</span> Dashboard</a>
+      <a href="/admin/complaints"  class="sb-link"><span class="sb-icon">📋</span> All Complaints</a>
+      <a href="/admin/departments" class="sb-link active"><span class="sb-icon">🏛️</span> Departments</a>
+      <a href="/admin/analytics"   class="sb-link"><span class="sb-icon">📈</span> Analytics</a>
+    </nav>
+    <div class="sb-footer">
+      <button class="sb-logout-btn" onclick="logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <main class="app-main" style="flex:1;width:100%;max-width:none;padding:2rem 2.5rem;box-sizing:border-box;overflow-x:hidden;background:#f4f6fb;">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h1>Departments</h1>
+        <p class="page-sub">Login credentials and complaint stats for all departments</p>
+      </div>
+      <button class="btn btn-primary" onclick="openCreateModal()" style="background:#4f46e5;color:#fff;border:none;padding:.65rem 1.2rem;border-radius:9px;font-weight:700;font-size:.875rem;cursor:pointer;white-space:nowrap;margin-top:.25rem;">
+        ＋ New Department
+      </button>
+    </div>
+
+    <!-- Summary row -->
+    <div class="dept-summary">
+      <div class="dept-sum-card">
+        <div class="dept-sum-icon">🏛️</div>
+        <div><div class="dept-sum-num" id="sum-depts">7</div><div class="dept-sum-lbl">Departments</div></div>
+      </div>
+      <div class="dept-sum-card">
+        <div class="dept-sum-icon">📋</div>
+        <div><div class="dept-sum-num" id="sum-assigned">—</div><div class="dept-sum-lbl">Total Assigned</div></div>
+      </div>
+      <div class="dept-sum-card">
+        <div class="dept-sum-icon">⏳</div>
+        <div><div class="dept-sum-num" id="sum-pending">—</div><div class="dept-sum-lbl">Pending</div></div>
+      </div>
+      <div class="dept-sum-card">
+        <div class="dept-sum-icon">✅</div>
+        <div><div class="dept-sum-num" id="sum-resolved">—</div><div class="dept-sum-lbl">Resolved</div></div>
+      </div>
+    </div>
+
+    <div class="dept-grid" id="deptGrid">
+      <!-- Cards injected by JS -->
+      <div style="grid-column:1/-1;text-align:center;padding:2rem;color:#94a3b8;">Loading departments…</div>
+    </div>
+  </main>
+</div>
+
+<!-- Create Department Modal -->
+<div class="modal-overlay hidden" id="createDeptModal">
+  <div class="modal-box">
+    <h2>🏛️ New Department</h2>
+    <div class="modal-field">
+      <label>Department Name</label>
+      <select id="newDeptName">
+        <option value="">— Select —</option>
+        <option>Public Works</option>
+        <option>Water & Sanitation</option>
+        <option>Electricity</option>
+        <option>Roads & Transport</option>
+        <option>Parks & Recreation</option>
+        <option>Health & Hygiene</option>
+        <option>Municipal Administration</option>
+        <option value="__custom__">Custom name…</option>
+      </select>
+    </div>
+    <div class="modal-field" id="customNameWrap" style="display:none;">
+      <label>Custom Department Name</label>
+      <input type="text" id="newDeptCustom" placeholder="e.g. Fire & Emergency">
+    </div>
+    <div class="modal-field">
+      <label>Login Email</label>
+      <input type="email" id="newDeptEmail" placeholder="dept@example.com">
+    </div>
+    <div class="modal-field">
+      <label>Password</label>
+      <input type="text" id="newDeptPassword" placeholder="Min. 8 characters">
+      <div style="font-size:.72rem;color:#94a3b8;margin-top:.3rem;">Share this with the department staff.</div>
+    </div>
+    <div id="createDeptMsg" class="modal-msg" style="display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeCreateModal()">Cancel</button>
+      <button class="btn-create" id="createDeptBtn" onclick="createDepartment()">Create Department</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEPT_ICONS = {
+  "Public Works":             "🔨",
+  "Water & Sanitation":       "💧",
+  "Electricity":              "⚡",
+  "Roads & Transport":        "🛣️",
+  "Parks & Recreation":       "🌳",
+  "Health & Hygiene":         "🏥",
+  "Municipal Administration": "🏛️"
+};
+
+function togglePw(id) {
+  const el  = document.getElementById("pw_" + id);
+  const btn = document.getElementById("pwbtn_" + id);
+  if (el.classList.contains("revealed")) {
+    el.classList.remove("revealed"); btn.textContent = "Show";
+  } else {
+    el.classList.add("revealed"); btn.textContent = "Hide";
+  }
+}
+
+function copyCredentials(email, password) {
+  const text = `Email: ${email}\nPassword: ${password}`;
+  navigator.clipboard.writeText(text).then(() => {
+    // brief visual feedback handled by button
+  });
+}
+
+// ── Create department modal ──────────────────────────────────
+function openCreateModal() {
+  document.getElementById('createDeptModal').classList.remove('hidden');
+  document.getElementById('newDeptName').value = '';
+  document.getElementById('newDeptEmail').value = '';
+  document.getElementById('newDeptPassword').value = '';
+  document.getElementById('customNameWrap').style.display = 'none';
+  const msg = document.getElementById('createDeptMsg');
+  msg.style.display = 'none';
+}
+
+function closeCreateModal() {
+  document.getElementById('createDeptModal').classList.add('hidden');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCreateModal();
+});
+
+document.getElementById('createDeptModal').addEventListener('click', function(e) {
+  if (e.target === this) closeCreateModal();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('newDeptName');
+  if (sel) sel.addEventListener('change', () => {
+    document.getElementById('customNameWrap').style.display =
+      sel.value === '__custom__' ? '' : 'none';
+  });
+});
+
+async function createDepartment() {
+  const nameRaw  = document.getElementById('newDeptName').value;
+  const name     = nameRaw === '__custom__'
+    ? document.getElementById('newDeptCustom').value.trim()
+    : nameRaw;
+  const email    = document.getElementById('newDeptEmail').value.trim();
+  const password = document.getElementById('newDeptPassword').value.trim();
+  const btn      = document.getElementById('createDeptBtn');
+  const msgEl    = document.getElementById('createDeptMsg');
+
+  msgEl.style.display = 'none';
+
+  if (!name) { showCreateMsg('Please select or enter a department name.', 'error'); return; }
+  if (!email) { showCreateMsg('Please enter a login email.', 'error'); return; }
+  if (password.length < 8) { showCreateMsg('Password must be at least 8 characters.', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  try {
+    const res  = await fetch('/api/admin/departments/create', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+      body: JSON.stringify({ name, email, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showCreateMsg('Department created! Refreshing…', 'success');
+      setTimeout(() => { closeCreateModal(); init(); }, 1200);
+    } else {
+      showCreateMsg(data.error || 'Failed to create department.', 'error');
+    }
+  } catch {
+    showCreateMsg('Network error. Please try again.', 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Create Department';
+}
+
+function showCreateMsg(text, type) {
+  const el = document.getElementById('createDeptMsg');
+  el.textContent = text;
+  el.className = 'modal-msg ' + type;
+  el.style.display = '';
+}
+
+async function init() {
+  const me = await fetch("/api/me", {credentials:"include"}).then(r=>r.json());
+  if (!me.authenticated || me.role !== "admin") { window.location.href="/login"; return; }
+
+  const [depts, statsAll] = await Promise.all([
+    fetch("/api/admin/departments", {credentials:"include"}).then(r=>r.json()),
+    fetch("/api/admin/analytics",   {credentials:"include"}).then(r=>r.json())
+  ]);
+
+  // Per-department stats (API returns paginated {data:[...], total:N})
+  const statPromises = depts.map(d =>
+    fetch(`/api/admin/complaints?department=${encodeURIComponent(d.name)}&per_page=1000`, {credentials:"include"})
+      .then(r=>r.json())
+      .then(resp => {
+        const list     = resp.data || [];
+        const total    = resp.total ?? list.length;
+        const pending  = list.filter(c=>c.status==="Pending").length;
+        const progress = list.filter(c=>c.status==="In Progress").length;
+        const resolved = list.filter(c=>c.status==="Resolved").length;
+        return {name: d.name, total, pending, progress, resolved};
+      })
+  );
+  const deptStats = await Promise.all(statPromises);
+  const statsMap  = Object.fromEntries(deptStats.map(s => [s.name, s]));
+
+  // Summary totals
+  const totalAssigned = deptStats.reduce((a,d)=>a+d.total,0);
+  const totalPending  = deptStats.reduce((a,d)=>a+d.pending,0);
+  const totalResolved = deptStats.reduce((a,d)=>a+d.resolved,0);
+  document.getElementById("sum-assigned").textContent = totalAssigned;
+  document.getElementById("sum-pending").textContent  = totalPending;
+  document.getElementById("sum-resolved").textContent = totalResolved;
+
+  const grid = document.getElementById("deptGrid");
+  grid.innerHTML = depts.map((d, i) => {
+    const s    = statsMap[d.name] || {total:0,pending:0,progress:0,resolved:0};
+    const rate = s.total > 0 ? Math.round((s.resolved/s.total)*100) : 0;
+    const icon = DEPT_ICONS[d.name] || "🏛️";
+    const id   = i;
+    return `
+    <div class="dept-card">
+      <div class="dept-card-header">
+        <div class="dept-icon">${icon}</div>
+        <div class="dept-name">${d.name}</div>
+        <span class="dept-resolved-badge">${rate}% resolved</span>
+      </div>
+
+      <div class="dept-stats-row">
+        <div class="dept-stat">
+          <div class="dept-stat-num">${s.total}</div>
+          <div class="dept-stat-label">Total</div>
+        </div>
+        <div class="dept-stat pending">
+          <div class="dept-stat-num">${s.pending}</div>
+          <div class="dept-stat-label">Pending</div>
+        </div>
+        <div class="dept-stat progress">
+          <div class="dept-stat-num">${s.progress}</div>
+          <div class="dept-stat-label">In Progress</div>
+        </div>
+        <div class="dept-stat resolved">
+          <div class="dept-stat-num">${s.resolved}</div>
+          <div class="dept-stat-label">Resolved</div>
+        </div>
+      </div>
+
+      <div class="res-mini-bar"><div class="res-mini-fill" style="width:${rate}%"></div></div>
+      <div class="res-mini-label"><span>Resolution Rate</span><span>${rate}%</span></div>
+
+      <div style="margin-top:.9rem;">
+        <div class="dept-cred-row">
+          <span class="dept-cred-label">Email</span>
+          <span class="dept-cred-val">${d.email}</span>
+        </div>
+        <div class="dept-cred-row">
+          <span class="dept-cred-label">Password</span>
+          <span class="dept-cred-val" style="color:#94a3b8;font-style:italic;">••••••••  (set at registration)</span>
+        </div>
+      </div>
+
+      <div class="dept-card-footer">
+        <button class="btn-portal" onclick="openDeptPortal('${d.name}')">↗ Open Portal</button>
+        <button class="btn-copy" onclick="navigator.clipboard.writeText('Email: ${d.email}');this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📧 Copy Email',1800)">📧 Copy Email</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+
+
+init();
+
+async function openDeptPortal(deptName) {
+  const res = await fetch('/admin/open-dept-portal', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'Content-Type':'application/json', 'X-CSRF-Token': getCsrfToken()},
+    body: JSON.stringify({department: deptName})
+  });
+  const data = await res.json();
+  if (res.ok) {
+    window.open(data.redirect, '_blank');
+  } else {
+    alert('Error: ' + (data.error || 'Could not open portal'));
+  }
+}
+</script>
+</body>
+</html>

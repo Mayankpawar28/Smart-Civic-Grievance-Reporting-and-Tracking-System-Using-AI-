@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>localStorage.removeItem("civic_lang");</script>
+<title>Department Complaints – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Detail Modal */
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;}
+.detail-overlay.hidden{display:none;}
+.detail-modal{background:#fff;border-radius:16px;width:100%;max-width:800px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.22);display:flex;flex-direction:column;}
+.detail-header{padding:1.4rem 1.8rem 1rem;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;position:sticky;top:0;background:#fff;z-index:1;border-radius:16px 16px 0 0;}
+.detail-title{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:800;color:#0f172a;margin-bottom:.3rem;line-height:1.3;}
+.detail-cid{font-size:.78rem;color:#475569;font-weight:600;}
+.detail-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:#9ca3af;padding:.2rem .5rem;border-radius:6px;transition:background .15s;}
+.detail-close:hover{background:#f3f4f6;color:#111;}
+.detail-body{padding:1.4rem 1.8rem;display:flex;flex-direction:column;gap:1.4rem;}
+.detail-meta{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.8rem;}
+.detail-meta-item{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:.7rem .9rem;}
+.detail-meta-item label{display:block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:.3rem;}
+.detail-meta-item span{font-size:.9rem;font-weight:600;color:#0f172a;display:block;word-break:break-word;}
+.detail-desc-box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:1rem 1.1rem;}
+.detail-desc-box label{display:block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:.5rem;}
+.detail-desc-box p{font-size:.92rem;color:#1e293b;line-height:1.7;margin:0;font-weight:500;}
+.detail-images-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:.7rem;}
+.detail-images-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.75rem;}
+.detail-img-thumb{aspect-ratio:4/3;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid #e5e7eb;transition:border-color .2s,transform .18s;position:relative;}
+.detail-img-thumb:hover{border-color:#059669;transform:scale(1.025);}
+.detail-img-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.no-images{color:#9ca3af;font-size:.88rem;font-style:italic;}
+/* Update section */
+.update-box{background:#f0fdf4;border:1.5px solid #a7f3d0;border-radius:12px;padding:1.2rem 1.4rem;}
+.update-box-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2563eb;margin-bottom:1rem;}
+.update-row{display:flex;gap:.8rem;align-items:flex-end;flex-wrap:wrap;}
+.update-field{flex:1;min-width:140px;}
+.update-field label{display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.35rem;}
+.update-field select{width:100%;padding:.55rem .75rem;border:1.5px solid #d1d5db;border-radius:8px;font-family:inherit;font-size:.88rem;outline:none;transition:border-color .2s;}
+.update-field select:focus{border-color:#2563eb;}
+.update-comment{width:100%;margin-top:.75rem;}
+.update-comment label{display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.35rem;}
+.update-comment textarea{width:100%;padding:.65rem .85rem;border:1.5px solid #d1d5db;border-radius:8px;font-family:inherit;font-size:.88rem;resize:vertical;min-height:72px;outline:none;transition:border-color .2s;box-sizing:border-box;}
+.update-comment textarea:focus{border-color:#2563eb;}
+.btn-save{padding:.55rem 1.3rem;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;transition:opacity .2s;white-space:nowrap;}
+.btn-save:hover{opacity:.88;}
+.upd-msg{padding:.5rem .8rem;border-radius:7px;font-size:.82rem;font-weight:500;margin-top:.6rem;}
+.upd-msg.success{background:#f0fdf4;color:#059669;border:1px solid #a7f3d0;}
+.upd-msg.error{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.upd-msg.hidden{display:none;}
+/* Activity log */
+.activity-log{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:.9rem 1.1rem;max-height:220px;overflow-y:auto;}
+.activity-log-title{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:.6rem;}
+.activity-item{display:flex;gap:.7rem;padding:.5rem 0;border-bottom:1px solid #f1f5f9;}
+.activity-item:last-child{border-bottom:none;}
+.activity-icon{font-size:1rem;min-width:20px;margin-top:.1rem;}
+.activity-info{flex:1;}
+.activity-change{font-size:.82rem;font-weight:600;color:#0f172a;}
+.activity-meta{font-size:.72rem;color:#94a3b8;margin-top:.1rem;}
+.activity-comment-text{font-size:.78rem;color:#475569;margin-top:.3rem;background:#f8fafc;border-radius:6px;padding:.3rem .6rem;border-left:3px solid #cbd5e1;}
+/* Sidebar dept theme */
+.sidebar{background:linear-gradient(180deg,#111827 0%,#1e3a5f 100%)!important;}
+.sb-brand-logo{background:rgba(255,255,255,.18)!important;}
+.sb-link:hover,.sb-link.active{background:rgba(255,255,255,.18)!important;color:#fff!important;}
+.sb-logout-btn{border-color:rgba(255,255,255,.25)!important;color:#f87171!important;}
+.sb-logout-btn:hover{background:rgba(239,68,68,.18)!important;}
+.sb-user-role{color:rgba(255,255,255,.5)!important;}
+/* Lightbox */
+.lightbox-overlay{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;z-index:2000;padding:1rem;}
+.lightbox-overlay.hidden{display:none;}
+.lightbox-img{max-width:90vw;max-height:85vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+.lightbox-close{position:fixed;top:1.2rem;right:1.4rem;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.5rem;cursor:pointer;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;}
+.lightbox-nav{position:fixed;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:2rem;cursor:pointer;border-radius:50%;width:50px;height:50px;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.lightbox-nav:hover{background:rgba(255,255,255,.3);}
+.lightbox-nav.prev{left:1.2rem;}
+.lightbox-nav.next{right:1.2rem;}
+.lightbox-counter{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);color:#fff;font-size:.85rem;background:rgba(0,0,0,.45);padding:.3rem 1rem;border-radius:99px;}
+.btn-view{background:#eef2ff;color:#2563eb;border:1px solid rgba(37,99,235,.2);}
+.btn-view:hover{background:#dbeafe;}
+.detail-footer{padding:1.1rem 1.8rem;border-top:1px solid #e5e7eb;display:flex;gap:.8rem;justify-content:flex-end;align-items:center;flex-wrap:wrap;}
+
+.work-upload-area{margin-top:.75rem;}
+.work-upload-label{display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.35rem;}
+.work-upload-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .85rem;border:1.5px dashed #c7d7fb;border-radius:8px;background:#eff6ff;color:#2563eb;font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;}
+.work-upload-btn:hover{background:#dbeafe;border-color:#2563eb;}
+.work-previews{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.55rem;}
+.work-preview-item{position:relative;width:70px;height:70px;border-radius:8px;overflow:hidden;border:2px solid #a7f3d0;}
+.work-preview-item img{width:100%;height:100%;object-fit:cover;}
+.work-preview-remove{position:absolute;top:2px;right:2px;background:rgba(220,38,38,.85);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+.activity-work-imgs{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem;}
+.activity-work-img{width:60px;height:60px;border-radius:6px;object-fit:cover;border:1.5px solid #e5e7eb;cursor:pointer;transition:transform .15s;}
+.activity-work-img:hover{transform:scale(1.08);border-color:#2563eb;}
+/* Admin impersonation banner */
+.admin-banner {
+  display:none; background:linear-gradient(90deg,#4f46e5,#7c3aed);
+  color:#fff; padding:.55rem 1.2rem; font-size:.8rem; font-weight:600;
+  align-items:center; justify-content:space-between; gap:1rem;
+  position:sticky; top:0; z-index:999; box-shadow:0 2px 8px rgba(79,70,229,.4);
+}
+.admin-banner.show { display:flex; }
+.admin-banner-text { display:flex; align-items:center; gap:.5rem; }
+.admin-banner-back {
+  padding:.3rem .85rem; background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.4);
+  border-radius:6px; color:#fff; font-size:.75rem; font-weight:700; cursor:pointer;
+  font-family:inherit; transition:background .15s;
+}
+.admin-banner-back:hover { background:rgba(255,255,255,.35); }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/js/main.js"></script>
+</head>
+<body class="app-page admin-page">
+  <!-- Admin impersonation banner -->
+  <div class="admin-banner" id="adminBanner">
+    <div class="admin-banner-text">
+      👁️ <strong>Admin View:</strong> You are viewing the <span id="bannerDeptName"></span> department portal
+    </div>
+    <button class="admin-banner-back" onclick="returnToAdmin()">← Back to Admin Panel</button>
+  </div>
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">🏛️</div>
+      <div class="sb-brand-name">CivicConnect<small id="deptSidebarName">Department</small></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/dept/dashboard" class="sb-link"><span class="sb-icon">📊</span> Dashboard</a>
+      <a href="/dept/complaints" class="sb-link active"><span class="sb-icon">📋</span> Complaints</a>
+      <a href="/dept/analytics" class="sb-link"><span class="sb-icon">📈</span> Analytics</a>
+    </nav>
+    <div class="sb-footer">
+      <button class="sb-logout-btn" onclick="logout()">↩ Logout</button>
+    </div>
+  </aside>
+
+  <main class="app-main" style="flex:1;width:100%;max-width:none;padding:2rem 2.5rem;box-sizing:border-box;overflow-x:hidden;background:#f4f6fb;">
+    <div class="page-header">
+      <div><h1 id="pg-title">Complaints</h1><p class="page-sub" id="pg-sub">Manage and update complaints assigned to your department</p></div>
+    </div>
+    <div class="filter-bar">
+      <select id="fStatus" onchange="load()"><option value="">All Status</option><option>Pending</option><option>In Progress</option><option>Resolved</option></select>
+      <select id="fPriority" onchange="load()"><option value="">All Priority</option><option>Low</option><option>Medium</option><option>High</option></select>
+      <select id="fCategory" onchange="load()">
+        <option value="">All Categories</option>
+        <option>Potholes & Roads</option><option>Garbage & Sanitation</option><option>Water Supply</option>
+        <option>Streetlights</option><option>Drainage & Flooding</option><option>Parks & Public Spaces</option>
+        <option>Noise Pollution</option><option>Other</option>
+      </select>
+    </div>
+    <div class="section-card">
+      <div class="table-wrap">
+        <table class="data-table">
+          <colgroup>
+            <col style="width:120px"><col style="width:160px"><col style="width:150px">
+            <col style="width:140px"><col style="width:150px"><col style="width:85px">
+            <col style="width:115px"><col style="width:130px">
+          </colgroup>
+          <thead>
+            <tr><th>ID</th><th>Citizen</th><th>Title</th><th>Category</th><th>Location</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="tbody"><tr><td colspan="8" class="loading">Loading…</td></tr></tbody>
+        </table>
+        <div id="pagination" style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border-top:1px solid var(--border);font-size:.83rem;color:var(--muted2);">
+          <span id="pg-info"></span>
+          <div style="display:flex;gap:.5rem;">
+            <button id="pg-prev" class="btn btn-sm btn-outline" onclick="changePage(-1)" disabled>← Prev</button>
+            <button id="pg-next" class="btn btn-sm btn-outline" onclick="changePage(1)"  disabled>Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Detail + Update Modal -->
+<div class="detail-overlay hidden" id="detailModal">
+  <div class="detail-modal">
+    <div class="detail-header">
+      <div>
+        <div class="detail-title" id="d-title">—</div>
+        <div class="detail-cid" id="d-cid">—</div>
+      </div>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-body">
+      <div class="detail-meta">
+        <div class="detail-meta-item"><label>Submitted By</label><span id="d-name">—</span></div>
+        <div class="detail-meta-item"><label>Email</label><span id="d-email" style="font-size:.82rem;word-break:break-all;">—</span></div>
+        <div class="detail-meta-item"><label>Category</label><span id="d-category">—</span></div>
+        <div class="detail-meta-item"><label>Priority</label><span id="d-priority">—</span></div>
+        <div class="detail-meta-item" style="grid-column:span 2;"><label>Location</label><span id="d-location">—</span></div>
+        <div class="detail-meta-item"><label>Submitted On</label><span id="d-date">—</span></div>
+        <div class="detail-meta-item"><label>Current Status</label><span id="d-status">—</span></div>
+      </div>
+      <div class="detail-desc-box">
+        <label>Full Description</label>
+        <p id="d-description">—</p>
+      </div>
+      <div>
+        <div class="detail-images-label" id="d-images-label">Evidence / Uploaded Images</div>
+        <div id="d-images-grid" class="detail-images-grid"></div>
+      </div>
+
+      <!-- Update Form -->
+      <div class="update-box">
+        <div class="update-box-title">✏️ Update Status</div>
+        <div class="update-row">
+          <div class="update-field">
+            <label>New Status</label>
+            <select id="u-status">
+              <option>Pending</option><option>In Progress</option><option>Resolved</option>
+            </select>
+          </div>
+          <button class="btn-save" onclick="submitUpdate()">Save Update</button>
+        </div>
+        <div class="update-comment">
+          <label>Comment / Notes (optional)</label>
+          <textarea id="u-comment" placeholder="Describe what was done, next steps, or any relevant notes…"></textarea>
+        </div>
+        <div class="work-upload-area">
+          <span class="work-upload-label">📸 Work Photos (optional — attach evidence of work done)</span>
+          <input type="file" id="workImageInput" accept="image/*" multiple style="display:none" onchange="handleWorkImages(this.files)">
+          <button class="work-upload-btn" onclick="document.getElementById('workImageInput').click()" type="button">📷 Add Photos</button>
+          <div class="work-previews" id="workPreviews"></div>
+        </div>
+        <div id="upd-msg" class="upd-msg hidden"></div>
+      </div>
+
+      <!-- Activity Log -->
+      <div>
+        <div class="activity-log-title">Update History</div>
+        <div class="activity-log" id="activityLog">
+          <div style="color:#9ca3af;font-size:.85rem;font-style:italic;">No updates yet.</div>
+        </div>
+      </div>
+    </div>
+    <div class="detail-footer">
+      <button class="btn btn-outline" onclick="closeDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox-overlay hidden" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-nav prev" id="lb-prev" onclick="lbNav(-1)">&#8249;</button>
+  <img class="lightbox-img" id="lb-img" src="" alt="Evidence">
+  <button class="lightbox-nav next" id="lb-next" onclick="lbNav(1)">&#8250;</button>
+  <div class="lightbox-counter" id="lb-counter"></div>
+</div>
+
+<script>
+let currentMongoId=null, currentComplaintId=null, lbImages=[], lbIndex=0;
+
+let complaintsCache = {};
+function openDetailById(id) { openDetail(complaintsCache[id]); }
+
+let currentPage=1;
+
+async function load(page){
+  if(page!==undefined)currentPage=page;
+  const params=new URLSearchParams();
+  const s=document.getElementById("fStatus").value,p=document.getElementById("fPriority").value,c=document.getElementById("fCategory").value;
+  if(s)params.set("status",s);if(p)params.set("priority",p);if(c)params.set("category",c);
+  params.set("page",currentPage);params.set("per_page",25);
+  const res=await fetch(`/api/dept/complaints?${params}`,{credentials:"include"});
+  const json=await res.json();
+  const data=json.data||[];
+  complaintsCache={}; data.forEach(c=>{complaintsCache[c._id]=c;});
+  const tbody=document.getElementById("tbody");
+  tbody.innerHTML=data.length?data.map(c=>`
+    <tr>
+      <td><code>${c.complaint_id}</code></td>
+      <td>${c.user_name}<br><small>${c.user_email}</small></td>
+      <td>${c.title}</td>
+      <td><span class="badge cat">${c.category}</span></td>
+      <td title="${c.location}">${c.location.length>22?c.location.substring(0,22)+"…":c.location}</td>
+      <td><span class="badge pri-${c.priority.toLowerCase()}">${c.priority}</span></td>
+      <td><span class="badge status-${c.status.toLowerCase().replace(" ","-")}">${c.status}</span></td>
+      <td><button class="btn btn-sm btn-view" data-id="${c._id}" onclick="openDetailById(this.dataset.id)">🔍 View & Update</button></td>
+    </tr>`).join(""):`<tr><td colspan="8" class="empty">No complaints assigned yet.</td></tr>`;
+
+  const total=json.total||0,pages=json.pages||1;
+  const start=total===0?0:(currentPage-1)*25+1,end=Math.min(currentPage*25,total);
+  document.getElementById("pg-info").textContent=total?`Showing ${start}–${end} of ${total}`:"No results";
+  document.getElementById("pg-prev").disabled=currentPage<=1;
+  document.getElementById("pg-next").disabled=currentPage>=pages;
+}
+
+function changePage(dir){load(currentPage+dir);}
+
+function openDetail(c){
+  currentMongoId=c._id;         // for activity log lookup
+  currentComplaintId=c.complaint_id; // for update URL
+  document.getElementById("d-title").textContent=c.title;
+  document.getElementById("d-cid").textContent=c.complaint_id+" · "+c.created_at;
+  document.getElementById("d-name").textContent=c.user_name;
+  document.getElementById("d-email").textContent=c.user_email;
+  document.getElementById("d-category").textContent=c.category;
+  document.getElementById("d-date").textContent=c.created_at||"—";
+  document.getElementById("d-description").textContent=c.description||"No description provided.";
+  document.getElementById("d-priority").innerHTML=`<span class="badge pri-${c.priority.toLowerCase()}">${c.priority}</span>`;
+  document.getElementById("d-status").innerHTML=`<span class="badge status-${c.status.toLowerCase().replace(" ","-")}">${c.status}</span>`;
+  const locEl=document.getElementById("d-location");
+  if(c.lat&&c.lng){locEl.innerHTML=`<span style="font-weight:600">${c.location||"—"}</span> <button onclick="openMapModal(${c.lat},${c.lng},'${(c.location||'').replace(/'/g,"'")}')" style="display:inline-flex;align-items:center;gap:.25rem;margin-left:.5rem;padding:.2rem .55rem;border-radius:6px;border:1.5px solid #c7d7fb;background:#eff6ff;color:#2563eb;font-size:.75rem;font-weight:700;cursor:pointer;">🗺️ View Map</button>`;}
+  else{locEl.textContent=c.location||"—";}
+  document.getElementById("u-status").value=c.status;
+  document.getElementById("u-comment").value="";
+  document.getElementById("upd-msg").className="upd-msg hidden";
+  const grid=document.getElementById("d-images-grid"),label=document.getElementById("d-images-label");
+  const imgs=(c.images||[]).map(url=>{if(!url)return null;return url.startsWith("http")?url:url.startsWith("/")?url:"/"+url;}).filter(Boolean);
+  lbImages=imgs;
+  if(!imgs.length){label.textContent="Evidence / Uploaded Images";grid.innerHTML=`<div class="no-images">📷 No images uploaded.</div>`;}
+  else{label.textContent=`Evidence / Uploaded Images (${imgs.length})`;grid.innerHTML=imgs.map((url,i)=>`<div class="detail-img-thumb" onclick="openLightbox(${i})"><img src="${url}" alt="Evidence ${i+1}" loading="lazy"></div>`).join("");}
+  loadActivity(c._id);
+  document.getElementById("detailModal").classList.remove("hidden");
+  document.body.style.overflow="hidden";
+}
+
+async function loadActivity(mongoId){
+  const log=document.getElementById("activityLog");
+  log.innerHTML=`<div style="color:#9ca3af;font-size:.85rem;font-style:italic;">Loading…</div>`;
+  const res=await fetch(`/api/activity?complaint_id=${mongoId}`,{credentials:"include"});
+  const data=await res.json();
+  if(!data.length){log.innerHTML=`<div style="color:#9ca3af;font-size:.85rem;font-style:italic;">No updates yet.</div>`;return;}
+  const icons={"Pending":"⏳","In Progress":"🔧","Resolved":"✅"};
+  const colors={"Pending":"#d97706","In Progress":"#2563eb","Resolved":"#059669"};
+  log.innerHTML=data.map(a=>`
+    <div class="activity-item">
+      <div class="activity-icon">${icons[a.new_status]||"📋"}</div>
+      <div class="activity-info">
+        <div class="activity-change">
+          <span style="color:#94a3b8">${a.old_status}</span>
+          <span style="color:#cbd5e1;margin:0 .3rem;">→</span>
+          <strong style="color:${colors[a.new_status]||'#4f46e5'}">${a.new_status}</strong>
+        </div>
+        <div class="activity-meta">By <strong>${a.updated_by}</strong> · ${a.timestamp}</div>
+        ${a.comment?`<div class="activity-comment-text">💬 ${a.comment}</div>`:""}
+        ${a.work_images&&a.work_images.length?`<div class="activity-work-imgs">${a.work_images.map(url=>`<img class="activity-work-img" src="${url}" onclick="openLightbox2('${url}')" title="Work photo">`).join("")}</div>`:""} 
+      </div>
+    </div>`).join("");
+}
+
+let workImageUrls = [];
+
+async function handleWorkImages(files) {
+  for (const file of Array.from(files).slice(0, 5 - workImageUrls.length)) {
+    const fd = new FormData(); fd.append('image', file);
+    const btn = document.querySelector('.work-upload-btn');
+    btn.textContent = '⏳ Uploading…'; btn.disabled = true;
+    try {
+      const res = await fetch('/api/upload-image', {method:'POST',credentials:'include',headers:{'X-CSRF-Token':getCsrfToken()},body:fd});
+      const data = await res.json();
+      if (data.url) { workImageUrls.push(data.url); renderWorkPreviews(); }
+    } catch(e) { console.error(e); }
+    btn.textContent = '📷 Add Photos'; btn.disabled = false;
+  }
+}
+
+function renderWorkPreviews() {
+  const el = document.getElementById('workPreviews');
+  el.innerHTML = workImageUrls.map((url,i) => `
+    <div class="work-preview-item">
+      <img src="${url}">
+      <button class="work-preview-remove" onclick="removeWorkImg(${i})">✕</button>
+    </div>`).join('');
+}
+
+function removeWorkImg(i) {
+  workImageUrls.splice(i, 1);
+  renderWorkPreviews();
+}
+
+function openLightbox2(url) {
+  lbImages = [url]; lbIndex = 0;
+  document.getElementById('lb-img').src = url;
+  document.getElementById('lb-counter').textContent = '';
+  document.getElementById('lb-prev').style.display = 'none';
+  document.getElementById('lb-next').style.display = 'none';
+  document.getElementById('lightbox').classList.remove('hidden');
+}
+
+async function submitUpdate(){
+  const msg=document.getElementById("upd-msg");
+  msg.className="upd-msg hidden";
+  const status=document.getElementById("u-status").value;
+  const comment=document.getElementById("u-comment").value.trim();
+  const res=await fetch(`/api/dept/complaints/${currentComplaintId}/update`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":getCsrfToken()},body:JSON.stringify({status,comment,work_images:workImageUrls})});
+  const data=await res.json();
+  if(res.ok){
+    msg.textContent="✅ Updated successfully!";msg.className="upd-msg success";
+    document.getElementById("d-status").innerHTML=`<span class="badge status-${status.toLowerCase().replace(" ","-")}">${status}</span>`;
+    document.getElementById("u-comment").value="";
+    workImageUrls=[]; renderWorkPreviews();
+    loadActivity(currentMongoId);load();
+  }else{msg.textContent=data.error;msg.className="upd-msg error";}
+}
+
+function closeDetail(){document.getElementById("detailModal").classList.add("hidden");document.body.style.overflow="";}
+function openLightbox(i){lbIndex=i;document.getElementById("lb-img").src=lbImages[i];document.getElementById("lb-counter").textContent=`${i+1} / ${lbImages.length}`;document.getElementById("lb-prev").style.display=lbImages.length>1?"flex":"none";document.getElementById("lb-next").style.display=lbImages.length>1?"flex":"none";document.getElementById("lightbox").classList.remove("hidden");}
+function closeLightbox(){document.getElementById("lightbox").classList.add("hidden");}
+function lbNav(dir){lbIndex=(lbIndex+dir+lbImages.length)%lbImages.length;document.getElementById("lb-img").src=lbImages[lbIndex];document.getElementById("lb-counter").textContent=`${lbIndex+1} / ${lbImages.length}`;}
+document.getElementById("lightbox").addEventListener("click",function(e){if(e.target===this)closeLightbox();});
+document.getElementById("detailModal").addEventListener("click",function(e){if(e.target===this)closeDetail();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeLightbox();closeDetail();}if(e.key==="ArrowRight"&&lbImages.length)lbNav(1);if(e.key==="ArrowLeft"&&lbImages.length)lbNav(-1);});
+
+
+fetch("/api/dept/me",{credentials:"include"}).then(r=>r.json()).then(d=>{
+  if(!d.authenticated){window.location.href="/login";return;}
+  document.getElementById("pg-title").textContent=d.department+" – Complaints";
+  document.getElementById("deptSidebarName").textContent=d.department;
+  load();
+});
+
+// Admin impersonation banner
+async function checkAdminBanner() {
+  try {
+    const res = await fetch('/api/dept/me', {credentials:'include'});
+    const d = await res.json();
+    if (!d.authenticated) { window.location.href = '/login'; return; }
+    // Check if impersonating (admin opened this)
+    const meRes = await fetch('/api/me', {credentials:'include'});
+    const me = await meRes.json();
+    if (me && me.prev_admin_id) {
+      const banner = document.getElementById('adminBanner');
+      if (banner) { banner.classList.add('show'); }
+      const nameEl = document.getElementById('bannerDeptName');
+      if (nameEl) nameEl.textContent = d.department;
+    }
+    return d;
+  } catch(e) { return null; }
+}
+
+async function returnToAdmin() {
+  const res = await fetch('/admin/restore-session', {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRF-Token':getCsrfToken()}
+  });
+  const data = await res.json();
+  if (res.ok) window.location.href = data.redirect;
+}
+
+</script>
+
+<!-- ── Location Map Modal ── -->
+<div class="detail-overlay hidden" id="mapModal" style="z-index:1100;">
+  <div class="detail-modal" style="max-width:640px;">
+    <div class="detail-header">
+      <div>
+        <div class="detail-title" style="font-size:1rem;">📍 Complaint Location</div>
+        <div class="detail-cid" id="mapModalAddr">—</div>
+      </div>
+      <button class="detail-close" onclick="closeMapModal()">✕</button>
+    </div>
+    <div style="height:360px;width:100%;" id="modalMapContainer"></div>
+    <div style="padding:.75rem 1.5rem;display:flex;justify-content:flex-end;gap:.5rem;border-top:1px solid #e5e7eb;">
+      <a id="mapModalGoogleLink" href="#" target="_blank" class="btn btn-primary" style="font-size:.82rem;padding:.4rem 1rem;">Open in Google Maps ↗</a>
+      <button class="btn btn-outline" onclick="closeMapModal()">Close</button>
+    </div>
+  </div>
+</div>
+<script>
+let _modalMap = null;
+function openMapModal(lat, lng, addr) {
+  document.getElementById('mapModalAddr').textContent = addr;
+  document.getElementById('mapModalGoogleLink').href = `https://maps.google.com/?q=${lat},${lng}`;
+  document.getElementById('mapModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => {
+    if (_modalMap) { _modalMap.remove(); _modalMap = null; }
+    _modalMap = L.map('modalMapContainer').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OpenStreetMap',maxZoom:19}).addTo(_modalMap);
+    L.marker([lat, lng]).addTo(_modalMap).bindPopup(addr).openPopup();
+  }, 80);
+}
+function closeMapModal() {
+  document.getElementById('mapModal').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (_modalMap) { _modalMap.remove(); _modalMap = null; }
+}
+document.getElementById('mapModal').addEventListener('click', function(e){ if(e.target===this) closeMapModal(); });
+</script>
+
+</body>
+</html>

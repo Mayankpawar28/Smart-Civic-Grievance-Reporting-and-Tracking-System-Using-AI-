@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><script>localStorage.removeItem("civic_lang");</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics – CivicConnect</title>
+<link rel="stylesheet" href="/static/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.an-body { background:#f0f2f8; min-height:100vh; }
+.an-main { flex:1; padding:2rem 2.2rem; box-sizing:border-box; overflow-x:hidden; background:#f0f2f8; }
+.an-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:.8rem; }
+.an-title  { font-family:'Playfair Display',serif; font-size:1.7rem; font-weight:800; color:#0f172a; }
+.an-sub    { font-size:.82rem; color:#64748b; margin-top:.2rem; }
+.an-filters { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.an-filter-btn { padding:.4rem .85rem; border-radius:8px; border:1.5px solid #e2e8f0; background:#fff; font-size:.77rem; font-weight:600; color:#475569; cursor:pointer; font-family:inherit; transition:all .15s; }
+.an-filter-btn.active, .an-filter-btn:hover { background:#4f46e5; color:#fff; border-color:#4f46e5; }
+
+/* KPI row */
+.an-kpi-row { display:grid; grid-template-columns:repeat(6,1fr); gap:.7rem; margin-bottom:1.2rem; }
+.an-kpi { background:#fff; border:1.5px solid #e5e7eb; border-radius:12px; padding:.8rem 1rem; box-shadow:0 1px 4px rgba(0,0,0,.05); position:relative; overflow:hidden; }
+.an-kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--kc,#4f46e5); }
+.an-kpi-icon { font-size:1.1rem; margin-bottom:.3rem; }
+.an-kpi-num  { font-size:1.45rem; font-weight:800; color:#0f172a; line-height:1; }
+.an-kpi-lbl  { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; margin-top:.22rem; }
+.an-kpi-delta { font-size:.65rem; font-weight:700; margin-top:.15rem; }
+.an-kpi-delta.up { color:#10b981; }
+.an-kpi-delta.down { color:#ef4444; }
+
+/* Insight cards */
+.an-insight-row { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; margin-bottom:1.1rem; }
+.an-insight { border-radius:12px; padding:1rem 1.1rem; color:#fff; position:relative; overflow:hidden; }
+.an-insight.indigo { background:linear-gradient(135deg,#4f46e5,#6366f1); }
+.an-insight.amber  { background:linear-gradient(135deg,#d97706,#f59e0b); }
+.an-insight.green  { background:linear-gradient(135deg,#059669,#10b981); }
+.an-insight-label { font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; opacity:.8; margin-bottom:.25rem; }
+.an-insight-val   { font-size:1.2rem; font-weight:800; line-height:1.25; }
+.an-insight-sub   { font-size:.71rem; opacity:.85; margin-top:.22rem; }
+.an-insight-badge { position:absolute; top:.7rem; right:.8rem; background:rgba(255,255,255,.2); border-radius:6px; padding:.15rem .45rem; font-size:.65rem; font-weight:700; }
+
+/* Cards */
+.an-card { background:#fff; border:1.5px solid #e5e7eb; border-radius:13px; padding:1.15rem 1.25rem; box-shadow:0 2px 6px rgba(0,0,0,.04); }
+.an-card-title { font-size:.77rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#374151; margin-bottom:.9rem; display:flex; align-items:center; justify-content:space-between; }
+.an-card-title span { font-size:.67rem; color:#94a3b8; font-weight:500; text-transform:none; letter-spacing:0; }
+
+/* Grids */
+.an-row2  { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+.an-row3  { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1rem; }
+.an-row32 { display:grid; grid-template-columns:2fr 1fr; gap:1rem; margin-bottom:1rem; }
+.an-row23 { display:grid; grid-template-columns:1fr 2fr; gap:1rem; margin-bottom:1rem; }
+
+/* Dept table */
+.dp-table { width:100%; border-collapse:collapse; font-size:.81rem; }
+.dp-table th { font-size:.63rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; padding:.38rem .6rem; border-bottom:1.5px solid #f1f5f9; text-align:left; white-space:nowrap; }
+.dp-table td { padding:.52rem .6rem; border-bottom:1px solid #f8fafc; color:#0f172a; vertical-align:middle; }
+.dp-table tr:last-child td { border-bottom:none; }
+.dp-table tr:hover td { background:#fafafa; }
+.mini-bw { display:flex; align-items:center; gap:.45rem; }
+.mini-b  { flex:1; background:#e5e7eb; border-radius:999px; height:6px; overflow:hidden; max-width:80px; }
+.mini-bf { height:100%; border-radius:999px; }
+.mini-bf.good { background:linear-gradient(90deg,#059669,#10b981); }
+.mini-bf.mid  { background:linear-gradient(90deg,#d97706,#f59e0b); }
+.mini-bf.bad  { background:linear-gradient(90deg,#dc2626,#ef4444); }
+.load-badge { font-size:.63rem; font-weight:700; padding:.13rem .42rem; border-radius:999px; }
+.load-high   { background:#fef2f2; color:#dc2626; }
+.load-medium { background:#fffbeb; color:#d97706; }
+.load-low    { background:#f0fdf4; color:#059669; }
+
+/* SLA bar */
+.sla-row { display:flex; align-items:center; gap:.6rem; margin-bottom:.45rem; }
+.sla-label { font-size:.75rem; font-weight:600; color:#374151; width:140px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sla-bar-bg { flex:1; background:#f1f5f9; border-radius:999px; height:8px; overflow:hidden; }
+.sla-bar-fill { height:100%; border-radius:999px; transition:width .6s ease; }
+.sla-pct { font-size:.72rem; font-weight:700; color:#4f46e5; min-width:35px; text-align:right; }
+
+/* Heatmap */
+.heatmap-grid { display:grid; grid-template-columns:30px repeat(24,1fr); gap:2px; font-size:.6rem; }
+.heatmap-cell { height:18px; border-radius:3px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:.55rem; cursor:default; }
+.heatmap-label { display:flex; align-items:center; justify-content:flex-end; padding-right:4px; color:#94a3b8; font-size:.6rem; font-weight:600; height:18px; }
+.heatmap-hour-label { text-align:center; color:#94a3b8; font-size:.55rem; padding-bottom:2px; }
+
+/* Category rank */
+.cat-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.3rem; }
+.cat-item { display:flex; flex-direction:row; align-items:center; gap:.75rem; padding:.55rem .75rem; border-radius:9px; background:#f8fafc; border:1px solid #f1f5f9; }
+.cat-num  { font-size:.72rem; font-weight:800; color:#818cf8; width:22px; height:22px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#eef2ff; border-radius:50%; }
+.cat-name { flex:1; font-size:.82rem; font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cat-bar  { width:70px; background:#e5e7eb; border-radius:999px; height:6px; overflow:hidden; flex-shrink:0; }
+.cat-bf   { height:100%; border-radius:999px; background:linear-gradient(90deg,#4f46e5,#818cf8); }
+.cat-cnt  { font-size:.78rem; font-weight:700; color:#4f46e5; min-width:28px; text-align:right; }
+
+/* Velocity meter */
+.velocity-box { text-align:center; padding:.5rem 0; }
+.velocity-num  { font-size:2.2rem; font-weight:800; color:#4f46e5; line-height:1; }
+.velocity-unit { font-size:.75rem; color:#94a3b8; font-weight:600; margin-top:.2rem; }
+.velocity-trend { font-size:.8rem; font-weight:700; margin-top:.5rem; }
+
+/* Avg resolution time */
+.avg-res-box { display:flex; flex-direction:column; gap:.5rem; }
+.avg-res-item { display:flex; justify-content:space-between; align-items:center; padding:.5rem .75rem; background:#f8fafc; border-radius:8px; border:1px solid #f1f5f9; }
+.avg-res-dept { font-size:.8rem; font-weight:600; color:#374151; }
+.avg-res-time { font-size:.82rem; font-weight:800; color:#4f46e5; }
+.avg-res-badge { font-size:.62rem; padding:.1rem .4rem; border-radius:6px; font-weight:700; }
+
+@media(max-width:1100px){
+  .an-kpi-row{grid-template-columns:repeat(3,1fr);}
+  .an-row2,.an-row32,.an-row23,.an-row3{grid-template-columns:1fr;}
+  .an-insight-row{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:640px){
+  .an-kpi-row{grid-template-columns:repeat(2,1fr);}
+  .an-insight-row{grid-template-columns:1fr;}
+  .an-main{padding:1rem;}
+}
+</style>
+<script src="/static/js/main.js"></script>
+</head>
+<body class="app-page admin-page an-body">
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-logo">⚙</div>
+      <div class="sb-brand-name">CivicConnect<small>Admin Panel</small></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/dashboard"         class="sb-link">📊 Dashboard</a>
+      <a href="/admin/complaints"  class="sb-link">📋 All Complaints</a>
+      <a href="/admin/departments" class="sb-link">🏛️ Departments</a>
+      <a href="/admin/analytics"   class="sb-link active">📈 Analytics</a>
+    </nav>
+    <div class="sb-footer">
+      <button class="sb-logout-btn" onclick="logout()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <main class="app-main an-main">
+    <div class="an-header">
+      <div>
+        <div class="an-title">Advanced Analytics</div>
+        <div class="an-sub" id="anSub">Loading…</div>
+      </div>
+      <div class="an-filters">
+        <button class="an-filter-btn active" onclick="setRange(this,'all')">All Time</button>
+        <button class="an-filter-btn"        onclick="setRange(this,'90')">90 Days</button>
+        <button class="an-filter-btn"        onclick="setRange(this,'30')">30 Days</button>
+        <button class="an-filter-btn"        onclick="setRange(this,'7')">7 Days</button>
+        <a href="/api/admin/export/excel" class="an-filter-btn" style="text-decoration:none;background:#eef2ff;color:#4f46e5;border-color:#c7d2fe;" download>⬇ Excel</a>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="an-kpi-row">
+      <div class="an-kpi" style="--kc:#4f46e5"><div class="an-kpi-icon">📋</div><div class="an-kpi-num" id="kTotal">—</div><div class="an-kpi-lbl">Total</div></div>
+      <div class="an-kpi" style="--kc:#f59e0b"><div class="an-kpi-icon">⏳</div><div class="an-kpi-num" id="kPending">—</div><div class="an-kpi-lbl">Pending</div></div>
+      <div class="an-kpi" style="--kc:#3b82f6"><div class="an-kpi-icon">🔧</div><div class="an-kpi-num" id="kProgress">—</div><div class="an-kpi-lbl">In Progress</div></div>
+      <div class="an-kpi" style="--kc:#10b981"><div class="an-kpi-icon">✅</div><div class="an-kpi-num" id="kResolved">—</div><div class="an-kpi-lbl">Resolved</div></div>
+      <div class="an-kpi" style="--kc:#8b5cf6"><div class="an-kpi-icon">📊</div><div class="an-kpi-num" id="kRate">—</div><div class="an-kpi-lbl">Resolution %</div></div>
+      <div class="an-kpi" style="--kc:#ec4899"><div class="an-kpi-icon">⚡</div><div class="an-kpi-num" id="kAvgRes">—</div><div class="an-kpi-lbl">Avg Resolve</div></div>
+    </div>
+
+    <!-- Insights -->
+    <div class="an-insight-row">
+      <div class="an-insight indigo">
+        <div class="an-insight-badge" id="insTopCatPct">—</div>
+        <div class="an-insight-label">Most Active Category</div>
+        <div class="an-insight-val"  id="insTopCat">—</div>
+        <div class="an-insight-sub"  id="insTopCatSub">—</div>
+      </div>
+      <div class="an-insight amber">
+        <div class="an-insight-badge" id="insPendingBadge">—</div>
+        <div class="an-insight-label">Highest Pending Load</div>
+        <div class="an-insight-val"  id="insPendingDept">—</div>
+        <div class="an-insight-sub"  id="insPendingDeptSub">—</div>
+      </div>
+      <div class="an-insight green">
+        <div class="an-insight-badge" id="insBestBadge">—</div>
+        <div class="an-insight-label">Best Performing Dept</div>
+        <div class="an-insight-val"  id="insBestDept">—</div>
+        <div class="an-insight-sub"  id="insBestDeptSub">—</div>
+      </div>
+    </div>
+
+    <!-- Row 1: Trend + Status -->
+    <div class="an-row2">
+      <div class="an-card">
+        <div class="an-card-title">Monthly Complaint Trend <span id="trendSub"></span></div>
+        <div style="position:relative;height:210px"><canvas id="cMonthly"></canvas></div>
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Status Distribution <span>current breakdown</span></div>
+        <div style="position:relative;height:210px"><canvas id="cStatus"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 2: Dept bar + Priority -->
+    <div class="an-row32">
+      <div class="an-card">
+        <div class="an-card-title">Complaints by Department <span>assigned count</span></div>
+        <div style="position:relative;height:200px"><canvas id="cDept"></canvas></div>
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Priority Breakdown</div>
+        <div style="position:relative;height:200px"><canvas id="cPriority"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 3: Complaint velocity + Avg resolution time by dept -->
+    <div class="an-row2">
+      <div class="an-card">
+        <div class="an-card-title">Weekly Complaint Velocity <span>complaints per week</span></div>
+        <div style="position:relative;height:190px"><canvas id="cVelocity"></canvas></div>
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Avg Resolution Time by Priority <span>days to resolve</span></div>
+        <div style="position:relative;height:190px"><canvas id="cResTime"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 4: Submission hour heatmap -->
+    <div class="an-card" style="margin-bottom:1rem">
+      <div class="an-card-title">Complaint Submission Heatmap <span>activity by day & hour</span></div>
+      <div id="heatmapWrap" style="overflow-x:auto;padding-bottom:.3rem"></div>
+    </div>
+
+    <!-- Row 5: Category + Top list -->
+    <div class="an-row2" style="align-items:stretch">
+      <div class="an-card" style="display:flex;flex-direction:column;min-height:300px">
+        <div class="an-card-title">Category Breakdown</div>
+        <div style="position:relative;flex:1"><canvas id="cCategory"></canvas></div>
+      </div>
+      <div class="an-card" style="display:flex;flex-direction:column">
+        <div class="an-card-title">Top Categories Ranked</div>
+        <ul class="cat-list" id="catList" style="flex:1"><li style="color:#94a3b8;font-size:.82rem;padding:.5rem 0">Loading…</li></ul>
+      </div>
+    </div>
+
+    <!-- Row 6: Resolution rate SLA per dept -->
+    <div class="an-row2" style="margin-bottom:1rem">
+      <div class="an-card">
+        <div class="an-card-title">Department SLA Performance <span>% resolved per dept</span></div>
+        <div id="slaList" style="padding-top:.3rem"></div>
+      </div>
+      <div class="an-card">
+        <div class="an-card-title">Dept Resolution Speed <span>avg days (resolved only)</span></div>
+        <div class="avg-res-box" id="avgResList"></div>
+      </div>
+    </div>
+
+    <!-- Dept Performance Table -->
+    <div class="an-card" style="margin-bottom:1.5rem">
+      <div class="an-card-title">Full Department Performance Report <span>all metrics in one view</span></div>
+      <div style="overflow-x:auto">
+        <table class="dp-table">
+          <thead><tr><th>Department</th><th>Total</th><th>Pending</th><th>In Progress</th><th>Resolved</th><th>High Priority</th><th>Resolution %</th><th>Avg Days</th><th>Load</th></tr></thead>
+          <tbody id="deptTableBody"><tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:1rem">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const PALETTE = ["#4f46e5","#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#ec4899","#14b8a6","#f97316","#06b6d4"];
+const DEPTS   = ["Public Works","Water & Sanitation","Electricity","Roads & Transport","Parks & Recreation","Health & Hygiene","Municipal Administration"];
+const DAYS    = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+let charts = {};
+let allData = [];
+
+function destroyAll() { Object.values(charts).forEach(c => { try{c.destroy()}catch(e){} }); charts = {}; }
+
+function parseDate(raw) {
+  if (!raw) return null;
+  // Handle "06 Mar 2026, 17:42" format
+  const d = new Date(raw.replace(/(\d{2}) (\w{3}) (\d{4}),/, '$2 $1 $3'));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function mkChart(id, type, labels, datasets, opts={}) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isLine = type==='line', isBar = type==='bar';
+  // Round bar corners
+  if (isBar) datasets.forEach(ds => { ds.borderRadius = ds.borderRadius ?? 7; ds.borderSkipped = false; });
+  charts[id] = new Chart(el, {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      animation: { duration: 900, easing: 'easeOutQuart' },
+      plugins:{
+        legend:{ display: opts.hideLegend!==true, position: (isLine||isBar)?'bottom':'right',
+          labels:{ font:{family:'DM Sans',size:11}, padding:14, boxWidth:10, usePointStyle: !isBar && !isLine } },
+        tooltip:{ titleFont:{family:'DM Sans'}, bodyFont:{family:'DM Sans'},
+          backgroundColor:'rgba(15,23,42,.85)', padding:10, cornerRadius:8 }
+      },
+      scales: (isLine||isBar) ? {
+        y:{ beginAtZero:true, grid:{color:'rgba(0,0,0,.05)'}, ticks:{stepSize:1,font:{family:'DM Sans',size:10}} },
+        x:{ grid:{display:false}, ticks:{font:{family:'DM Sans',size:10},maxRotation:30} }
+      } : {}
+    }
+  });
+}
+
+function render(data) {
+  destroyAll();
+  const total      = data.length;
+  const pending    = data.filter(c=>c.status==='Pending').length;
+  const inProg     = data.filter(c=>c.status==='In Progress').length;
+  const resolved   = data.filter(c=>c.status==='Resolved').length;
+  const rate       = total>0 ? Math.round(resolved/total*100) : 0;
+
+  // Avg resolution time (days) — approximate from created_at + updated_at
+  const resolvedWithDates = data.filter(c=>c.status==='Resolved' && parseDate(c.created_at) && parseDate(c.updated_at||c.created_at));
+  const avgDays = resolvedWithDates.length > 0
+    ? (resolvedWithDates.reduce((sum,c)=>{
+        const diff = (parseDate(c.updated_at||c.created_at) - parseDate(c.created_at)) / (1000*60*60*24);
+        return sum + Math.max(0, diff);
+      }, 0) / resolvedWithDates.length).toFixed(1)
+    : '—';
+
+  document.getElementById('kTotal').textContent    = total;
+  document.getElementById('kPending').textContent  = pending;
+  document.getElementById('kProgress').textContent = inProg;
+  document.getElementById('kResolved').textContent = resolved;
+  document.getElementById('kRate').textContent     = rate+'%';
+  document.getElementById('kAvgRes').textContent   = avgDays === '—' ? '—' : avgDays+'d';
+
+  // Category counts
+  const catMap = {};
+  data.forEach(c=>{ const k=c.category||'Other'; catMap[k]=(catMap[k]||0)+1; });
+  const sortedCats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  if (sortedCats[0]) {
+    const pct = Math.round(sortedCats[0][1]/total*100);
+    document.getElementById('insTopCat').textContent    = sortedCats[0][0];
+    document.getElementById('insTopCatSub').textContent = `${sortedCats[0][1]} complaints — ${pct}% of total`;
+    document.getElementById('insTopCatPct').textContent = pct+'%';
+  }
+
+  // Dept pending
+  const dPend = {};
+  data.filter(c=>c.status!=='Resolved'&&c.department&&c.department!=='Unassigned')
+      .forEach(c=>{ dPend[c.department]=(dPend[c.department]||0)+1; });
+  const topPend = Object.entries(dPend).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('insPendingDept').textContent    = topPend ? topPend[0] : 'None';
+  document.getElementById('insPendingDeptSub').textContent = topPend ? `${topPend[1]} open complaints` : 'All resolved';
+  document.getElementById('insPendingBadge').textContent   = topPend ? topPend[1]+' open' : '✓';
+
+  // Best dept by resolution rate (min 2 complaints)
+  const dSt = {};
+  data.filter(c=>c.department&&c.department!=='Unassigned').forEach(c=>{
+    if (!dSt[c.department]) dSt[c.department]={total:0,resolved:0};
+    dSt[c.department].total++;
+    if (c.status==='Resolved') dSt[c.department].resolved++;
+  });
+  const best = Object.entries(dSt).filter(([,s])=>s.total>=2).map(([n,s])=>[n,Math.round(s.resolved/s.total*100)]).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('insBestDept').textContent    = best ? best[0] : '—';
+  document.getElementById('insBestDeptSub').textContent = best ? `${best[1]}% resolution rate` : 'Insufficient data';
+  document.getElementById('insBestBadge').textContent   = best ? best[1]+'%' : '—';
+
+  // ── CHART: Monthly trend ──
+  const monthMap = {};
+  data.forEach(c=>{
+    const d = parseDate(c.created_at);
+    if (!d) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    monthMap[key]=(monthMap[key]||0)+1;
+  });
+  const months = Object.keys(monthMap).sort().slice(-12);
+  const mLabels = months.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleString('default',{month:'short',year:'2-digit'});});
+  mkChart('cMonthly','line',mLabels,[{
+    label:'Complaints',data:months.map(m=>monthMap[m]),
+    backgroundColor:'rgba(79,70,229,.12)',borderColor:'#4f46e5',
+    borderWidth:2.5,fill:true,tension:0.4,
+    pointBackgroundColor:'#4f46e5',pointRadius:4
+  }],{hideLegend:true});
+  document.getElementById('trendSub').textContent = `${months.length} months`;
+
+  // ── CHART: Status doughnut ──
+  mkChart('cStatus','doughnut',['Pending','In Progress','Resolved'],[{
+    data:[pending,inProg,resolved],
+    backgroundColor:['#f59e0b','#3b82f6','#10b981'],
+    borderWidth:2,borderColor:'#fff',hoverOffset:6
+  }]);
+
+  // ── CHART: Dept bar ──
+  const dAssigned = {};
+  DEPTS.forEach(d=>dAssigned[d]=0);
+  data.forEach(c=>{ const k=c.department||'Unassigned'; if(dAssigned[k]!==undefined)dAssigned[k]++; });
+  const dKeys = DEPTS.filter(k=>dAssigned[k]>0);
+  mkChart('cDept','bar',dKeys.map(k=>k.replace(' & ','\n& ').replace('Administration','Admin')),[{
+    label:'Complaints',data:dKeys.map(k=>dAssigned[k]),
+    backgroundColor:PALETTE,borderRadius:6,borderSkipped:false
+  }],{hideLegend:true});
+
+  // ── CHART: Priority pie ──
+  const priC={High:0,Medium:0,Low:0};
+  data.forEach(c=>{if(priC[c.priority]!==undefined)priC[c.priority]++;});
+  mkChart('cPriority','pie',['High','Medium','Low'],[{
+    data:[priC.High,priC.Medium,priC.Low],
+    backgroundColor:['#ef4444','#f59e0b','#10b981'],
+    borderWidth:2,borderColor:'#fff',hoverOffset:6
+  }]);
+
+  // ── CHART: Weekly velocity ──
+  const weekMap = {};
+  data.forEach(c=>{
+    const d = parseDate(c.created_at);
+    if (!d) return;
+    // ISO week key
+    const jan1 = new Date(d.getFullYear(),0,1);
+    const week = Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+    const key = `${d.getFullYear()}-W${String(week).padStart(2,'0')}`;
+    weekMap[key]=(weekMap[key]||0)+1;
+  });
+  const weeks = Object.keys(weekMap).sort().slice(-12);
+  mkChart('cVelocity','bar',weeks.map(w=>w.replace('-W',' W')),[{
+    label:'Complaints/week',data:weeks.map(w=>weekMap[w]),
+    backgroundColor:'rgba(99,102,241,.7)',borderColor:'#4f46e5',
+    borderWidth:1.5,borderRadius:5,borderSkipped:false
+  }],{hideLegend:true});
+
+  // ── CHART: Avg resolution time by priority ──
+  const resTime={High:[],Medium:[],Low:[]};
+  data.filter(c=>c.status==='Resolved').forEach(c=>{
+    const start=parseDate(c.created_at), end=parseDate(c.updated_at);
+    if(!start||!end||!resTime[c.priority]) return;
+    const diff=(end-start)/(1000*60*60*24);
+    if(diff>=0) resTime[c.priority].push(diff);
+  });
+  const avg = p => resTime[p].length ? (resTime[p].reduce((a,b)=>a+b,0)/resTime[p].length).toFixed(1) : 0;
+  mkChart('cResTime','bar',['High Priority','Medium Priority','Low Priority'],[{
+    label:'Avg Days',data:[avg('High'),avg('Medium'),avg('Low')],
+    backgroundColor:['rgba(239,68,68,.75)','rgba(245,158,11,.75)','rgba(16,185,129,.75)'],
+    borderColor:['#ef4444','#f59e0b','#10b981'],
+    borderWidth:1.5,borderRadius:6,borderSkipped:false
+  }],{hideLegend:true});
+
+  // ── HEATMAP: Day × Hour ──
+  const heatGrid = {};
+  DAYS.forEach(d=>{ heatGrid[d]={}; for(let h=0;h<24;h++) heatGrid[d][h]=0; });
+  data.forEach(c=>{
+    const d=parseDate(c.created_at);
+    if(!d) return;
+    const day=DAYS[d.getDay()], hr=d.getHours();
+    heatGrid[day][hr]++;
+  });
+  const allCounts = DAYS.flatMap(d=>Object.values(heatGrid[d]));
+  const maxHeat = Math.max(...allCounts, 1);
+  function heatColor(v) {
+    if(v===0) return '#f1f5f9';
+    const t = v/maxHeat;
+    if(t<0.33) return `rgba(99,102,241,${0.2+t*1.2})`;
+    if(t<0.66) return `rgba(99,102,241,${0.5+t*0.5})`;
+    return `rgba(79,70,229,${0.7+t*0.3})`;
+  }
+  let html = '<div class="heatmap-grid">';
+  // Hour labels row
+  html += '<div class="heatmap-label"></div>';
+  for(let h=0;h<24;h++) html += `<div class="heatmap-hour-label">${h}</div>`;
+  DAYS.forEach(day=>{
+    html += `<div class="heatmap-label">${day}</div>`;
+    for(let h=0;h<24;h++){
+      const v=heatGrid[day][h];
+      html += `<div class="heatmap-cell" style="background:${heatColor(v)}" title="${day} ${h}:00 — ${v} complaints">${v||''}</div>`;
+    }
+  });
+  html += '</div>';
+  document.getElementById('heatmapWrap').innerHTML = html;
+
+  // ── Category bar ──
+  const catMax = sortedCats[0]?.[1]||1;
+  const catEl = document.getElementById('cCategory');
+  if(catEl){
+    if(charts['cCategory']){try{charts['cCategory'].destroy()}catch(e){}}
+    charts['cCategory'] = new Chart(catEl,{
+      type:'bar',
+      data:{labels:sortedCats.map(([k])=>k),datasets:[{
+        label:'Count',data:sortedCats.map(([,v])=>v),
+        backgroundColor:sortedCats.map((_,i)=>PALETTE[i%PALETTE.length]),
+        borderRadius:6,borderSkipped:false,barPercentage:.65,categoryPercentage:.8
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{bodyFont:{family:'DM Sans'}}},
+        scales:{y:{beginAtZero:true,suggestedMax:catMax+1,grid:{color:'#f1f5f9'},ticks:{stepSize:1,font:{family:'DM Sans',size:11}}},
+                x:{grid:{display:false},ticks:{font:{family:'DM Sans',size:11},maxRotation:15}}}}
+    });
+  }
+
+  // ── Top cats list ──
+  const maxC = sortedCats[0]?.[1]||1;
+  document.getElementById('catList').innerHTML = sortedCats.slice(0,7).map(([name,cnt],i)=>`
+    <li class="cat-item">
+      <span class="cat-num">${i+1}</span>
+      <span class="cat-name">${name}</span>
+      <div class="cat-bar"><div class="cat-bf" style="width:${Math.round(cnt/maxC*100)}%"></div></div>
+      <span class="cat-cnt">${cnt}</span>
+    </li>`).join('');
+
+  // ── SLA per dept ──
+  const slaHtml = DEPTS.map(dept=>{
+    const dc=data.filter(c=>c.department===dept), dt=dc.length;
+    if(!dt) return '';
+    const dr=dc.filter(c=>c.status==='Resolved').length;
+    const pct=Math.round(dr/dt*100);
+    const cls=pct>=75?'good':pct>=40?'mid':'bad';
+    return `<div class="sla-row">
+      <div class="sla-label" title="${dept}">${dept.replace('Administration','Admin')}</div>
+      <div class="sla-bar-bg"><div class="sla-bar-fill mini-bf ${cls}" style="width:${pct}%"></div></div>
+      <div class="sla-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+  document.getElementById('slaList').innerHTML = slaHtml || '<div style="color:#94a3b8;font-size:.82rem">No data yet.</div>';
+
+  // ── Avg resolution speed per dept ──
+  const avgResHtml = DEPTS.map(dept=>{
+    const resolved_dc = data.filter(c=>c.department===dept&&c.status==='Resolved');
+    const withDates = resolved_dc.filter(c=>parseDate(c.created_at)&&parseDate(c.updated_at));
+    if(!withDates.length) return '';
+    const avgD = (withDates.reduce((sum,c)=>sum+Math.max(0,(parseDate(c.updated_at)-parseDate(c.created_at))/(1000*60*60*24)),0)/withDates.length).toFixed(1);
+    const cls = avgD<3?'background:#f0fdf4;color:#059669':avgD<7?'background:#fffbeb;color:#d97706':'background:#fef2f2;color:#dc2626';
+    return `<div class="avg-res-item">
+      <span class="avg-res-dept">${dept.replace('Administration','Admin')}</span>
+      <span class="avg-res-badge" style="${cls}">${avgD}d avg</span>
+    </div>`;
+  }).filter(Boolean).join('');
+  document.getElementById('avgResList').innerHTML = avgResHtml || '<div style="color:#94a3b8;font-size:.82rem;padding:.5rem">No resolved complaints yet.</div>';
+
+  // ── Full dept table ──
+  document.getElementById('deptTableBody').innerHTML = DEPTS.map(dept=>{
+    const dc=data.filter(c=>c.department===dept);
+    const dt=dc.length, dp=dc.filter(c=>c.status==='Pending').length;
+    const di=dc.filter(c=>c.status==='In Progress').length, dr=dc.filter(c=>c.status==='Resolved').length;
+    const dh=dc.filter(c=>c.priority==='High').length;
+    const dr2=dt>0?Math.round(dr/dt*100):0;
+    const withDt=dc.filter(c=>c.status==='Resolved'&&parseDate(c.created_at)&&parseDate(c.updated_at));
+    const avgD=withDt.length?(withDt.reduce((s,c)=>s+Math.max(0,(parseDate(c.updated_at)-parseDate(c.created_at))/(86400000)),0)/withDt.length).toFixed(1):'—';
+    const barcls=dr2>=75?'good':dr2>=40?'mid':'bad';
+    const lc=dp>3?'high':dp>1?'medium':'low', ll=dp>3?'🔴 High':dp>1?'🟡 Med':'🟢 Low';
+    return `<tr>
+      <td><strong style="font-size:.82rem">${dept}</strong></td>
+      <td><strong>${dt}</strong></td>
+      <td style="color:#d97706;font-weight:700">${dp}</td>
+      <td style="color:#2563eb;font-weight:700">${di}</td>
+      <td style="color:#059669;font-weight:700">${dr}</td>
+      <td style="color:#dc2626;font-weight:700">${dh}</td>
+      <td><div class="mini-bw"><div class="mini-b"><div class="mini-bf ${barcls}" style="width:${dr2}%"></div></div><span style="font-size:.74rem;font-weight:700">${dr2}%</span></div></td>
+      <td style="font-weight:600;color:#4f46e5">${avgD}${avgD!=='—'?'d':''}</td>
+      <td><span class="load-badge load-${lc}">${ll}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function setRange(btn, range) {
+  document.querySelectorAll('.an-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const cutoff = range==='all' ? null : (d=>{d.setDate(d.getDate()-parseInt(range));return d;})(new Date());
+  const filtered = cutoff ? allData.filter(c=>{
+    const d=parseDate(c.created_at);
+    return d && d>=cutoff;
+  }) : allData;
+  const lbl = range==='all'?'All time':`Last ${range} days`;
+  document.getElementById('anSub').textContent = `${lbl} · ${filtered.length} complaints`;
+  render(filtered);
+}
+
+async function init() {
+  const me = await fetch('/api/me',{credentials:'include'}).then(r=>r.json());
+  if (!me.authenticated||me.role!=='admin') { window.location.href='/login'; return; }
+  const _cr = await fetch('/api/admin/complaints?per_page=1000',{credentials:'include'}).then(r=>r.json());
+  allData = _cr.data || [];
+  document.getElementById('anSub').textContent = `All time · ${allData.length} complaints`;
+  render(allData);
+}
+init();
+</script>
+</body>
+</html>
