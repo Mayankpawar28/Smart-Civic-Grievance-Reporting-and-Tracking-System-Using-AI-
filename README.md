@@ -5,14 +5,19 @@ Technology Stack
 
 Backend: Python, Flask, Flask-CORS, PyMongo, Werkzeug
 Database: MongoDB (flexible document structure for complaint records)
+
 Frontend: HTML5, CSS3, JavaScript, Jinja2 templates
 Maps: Leaflet.js (interactive complaint location pinning)
+
 AI: Ollama local LLM (title suggestion and description enhancement)
 Document Export: ReportLab (PDF), OpenPyXL (Excel)
+
 Auth: Email OTP verification, session-based multi-role login
 
 
+
 Features and Functionalities
+
 Citizen Portal:
 
 Register with email OTP verification for secure, verified accounts
@@ -30,13 +35,15 @@ Update complaint status and add resolution remarks visible to the citizen
 
 Admin Panel:
 
-View and manage all complaints across all departments
-Create departments and monitor their credentials and complaint load
-Analytics dashboard with category breakdown charts, SLA performance, resolution rates, and average resolution speed
-Export complaint data as Excel reports
+View, filter, and manage all complaints submitted across every department from a single interface
+Create new government departments and view their login credentials, complaint load, and resolution stats
+Monitor department SLA performance — track what percentage of complaints each department has resolved and how fast
+Analytics dashboard showing category-wise complaint breakdown, top complaint categories ranked, department resolution speed in average days, and a full department performance report table
+Export complaint data as Excel reports for offline record keeping
 
 
 Installation and Setup
+
 Prerequisites: Python 3.10+, MongoDB running locally, Git
 Step 1 - Clone the repository:
 git clone https://github.com/Mayankpawar28/Smart-Civic-Grievance-Reporting-and-Tracking-System-Using-AI-
@@ -51,6 +58,7 @@ Step 5 - Open in browser:
 http://localhost:5000
 Default admin login — Email: admin@civic.gov (password set on first run)
 Department logins are visible in the Admin panel under Departments.
+
 
 Team Members:
 
