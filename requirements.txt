@@ -5,3 +5,4 @@ werkzeug
 python-dotenv
 reportlab
 openpyxl
+gunicorn
